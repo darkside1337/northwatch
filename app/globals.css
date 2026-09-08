@@ -1,26 +1,236 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Northwatch Horological Restraint Colors */
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent-muted: var(--accent-muted);
+  --color-error: var(--error);
+
+  /* Shadcn Theme Mappings */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Font Families */
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", "EB Garamond", "Freight Display", "Georgia", serif;
+  --font-sans: var(--font-inter), "Inter", "Neue Haas Grotesk", -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", "SF Mono", "Consolas", monospace;
+  --font-heading: var(--font-serif);
+
+  /* Radius (Horological Restraint: none or subtle 2px only) */
+  --radius-none: 0px;
+  --radius-subtle: 2px;
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-4xl: 2px;
+
+  /* Spacing Scale */
+  --spacing-section-sm: 96px;
+  --spacing-section-lg: 128px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@utility text-wordmark {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  line-height: 1.0;
+  text-transform: uppercase;
+}
+
+@utility text-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+@utility text-h1 {
+  font-family: var(--font-serif);
+  font-size: 3.75rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+@utility text-h2 {
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
+  font-weight: 400;
+  letter-spacing: 0em;
+  line-height: 1.15;
+}
+
+@utility text-h3 {
+  font-family: var(--font-serif);
+  font-size: 1.875rem;
+  font-weight: 400;
+  letter-spacing: 0em;
+  line-height: 1.25;
+}
+
+@utility text-body-primary {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0em;
+  line-height: 1.6;
+}
+
+@utility text-body-secondary {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+}
+
+@utility text-spec-label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+}
+
+@utility text-btn {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1.0;
+  text-transform: uppercase;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+:root {
+  /* Horological Restraint Design Tokens */
+  --surface: #FAF9F6;
+  --surface-dim: #DBDAD7;
+  --surface-bright: #FFFFFF;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F4F3F0;
+  --surface-container: #EFECE6;
+  --surface-container-high: #E8E4DD;
+  --on-surface: #141413;
+  --on-surface-variant: #595854;
+  --outline: #DCD8D0;
+  --outline-variant: #E8E5DF;
+  --primary: #141413;
+  --on-primary: #FFFFFF;
+  --primary-hover: #2A2A28;
+  --accent: #3B4436;
+  --accent-muted: #606C5A;
+  --error: #9E2A2B;
+
+  /* Shadcn Mappings */
+  --background: var(--surface);
+  --foreground: var(--on-surface);
+  --card: var(--surface);
+  --card-foreground: var(--on-surface);
+  --popover: var(--surface);
+  --popover-foreground: var(--on-surface);
+  --primary-foreground: var(--on-primary);
+  --secondary: var(--surface-container);
+  --secondary-foreground: var(--on-surface);
+  --muted: var(--surface-container-low);
+  --muted-foreground: var(--on-surface-variant);
+  --accent-foreground: #FFFFFF;
+  --destructive: var(--error);
+  --destructive-foreground: #FFFFFF;
+  --border: var(--outline);
+  --input: var(--outline);
+  --ring: var(--accent);
+  --radius: 2px;
+}
+
+.dark {
+  --surface: #141413;
+  --surface-dim: #0E0E0D;
+  --surface-bright: #1E1E1C;
+  --surface-container-lowest: #141413;
+  --surface-container-low: #1A1A18;
+  --surface-container: #222220;
+  --surface-container-high: #2A2A28;
+  --on-surface: #FAF9F6;
+  --on-surface-variant: #A29F98;
+  --outline: #333230;
+  --outline-variant: #262523;
+  --primary: #FAF9F6;
+  --on-primary: #141413;
+  --primary-hover: #E8E5DF;
+  --accent: #606C5A;
+  --accent-muted: #3B4436;
+  --error: #CF4B4C;
+
+  --background: var(--surface);
+  --foreground: var(--on-surface);
+  --card: var(--surface);
+  --card-foreground: var(--on-surface);
+  --popover: var(--surface);
+  --popover-foreground: var(--on-surface);
+  --primary-foreground: var(--on-primary);
+  --secondary: var(--surface-container);
+  --secondary-foreground: var(--on-surface);
+  --muted: var(--surface-container-low);
+  --muted-foreground: var(--on-surface-variant);
+  --accent-foreground: #FFFFFF;
+  --destructive: var(--error);
+  --destructive-foreground: #FFFFFF;
+  --border: var(--outline);
+  --input: var(--outline);
+  --ring: var(--accent);
+  --radius: 2px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
