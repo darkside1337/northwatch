@@ -26,13 +26,13 @@ Nothing user-facing yet; this is the scaffolding everything else composes into.
 - [x] `config/env.ts` — typed Zod schema for `process.env` (DB url, Stripe keys, OAuth client IDs/secrets, shipping keys)
 - [x] `config/site.ts` — currency definition, tax rules per region, shipping tiers (stub values OK for now)
 - [x] Set up Vitest test runner (`pnpm test`) + unit tests in `config/site.test.ts` (boundary rules, tax rounding, currency formatting)
-- [ ] Provision Neon Postgres project
-- [ ] Refactor `lib/db/drizzle.ts` → `lib/db/client.ts` — **use the pooled driver**, not `neon()` HTTP client: either Neon's WebSocket `Pool` (`@neondatabase/serverless`) or `pg.Pool` over the pooled connection string. Required for interactive transactions used in checkout/order writes
-- [ ] `lib/db/schema.ts` — initial Drizzle schema stub (products, variants, users, orders, order_items — expand in Phase 1)
-- [ ] Confirm `pnpm drizzle-kit generate` / `pnpm drizzle-kit migrate` workflow works end-to-end on an empty schema — **all schema changes from here on go through migrations, never manual DB edits**
-- [ ] Root `app/layout.tsx` — HTML shell, fonts, global providers (no business logic)
-- [ ] Empty `proxy.ts` at project root (auth gating logic added in Phase 4) — confirm it's wired for `/account/*` and `/checkout/*`, and that `middleware.ts` is **not** used for this
-- [ ] **Phase 0 Exit Check**: `pnpm build` and `pnpm lint` succeed cleanly; pooled DB client connects without errors.
+- [x] Provision Neon Postgres project
+- [x] Refactor `lib/db/drizzle.ts` → `lib/db/client.ts` — **use the pooled driver**, not `neon()` HTTP client: either Neon's WebSocket `Pool` (`@neondatabase/serverless`) or `pg.Pool` over the pooled connection string. Required for interactive transactions used in checkout/order writes
+- [x] `lib/db/schema.ts` — initial Drizzle schema stub (products, variants, users, orders, order_items — expand in Phase 1)
+- [x] Confirm `pnpm drizzle-kit generate` / `pnpm drizzle-kit migrate` workflow works end-to-end on an empty schema — **all schema changes from here on go through migrations, never manual DB edits**
+- [x] Root `app/layout.tsx` — HTML shell, fonts, global providers (no business logic)
+- [x] Empty `proxy.ts` at project root (auth gating logic added in Phase 4) — confirm it's wired for `/account/*` and `/checkout/*`, and that `middleware.ts` is **not** used for this
+- [x] **Phase 0 Exit Check**: `pnpm build` and `pnpm lint` succeed cleanly; pooled DB client connects without errors.
 
 ---
 
