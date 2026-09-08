@@ -38,14 +38,19 @@ Northwatch is a boutique ecommerce storefront for minimalist men's watches built
 5. **Schema changes via migrations**: Drizzle schema updates must use migration files generated via Drizzle Kit.
 6. **E2E checkout test must never break**: The checkout flow (`e2e/checkout.spec.ts`) is critical path [TODO: test runner setup pending].
 
-## 4. Progressive Disclosure (Read When Needed)
+## 4. Git & Commit Workflow
+
+1. **No autonomous commits**: Never run `git commit` automatically. When a milestone or logical chunk of work is complete and verified, suggest a conventional commit command with a proposed message and the list of files to stage, then wait for user instruction.
+2. **Never push autonomously**: Never run `git push` unless the user explicitly commands it in that exact prompt.
+
+## 5. Progressive Disclosure (Read When Needed)
 
 - **Architecture & request lifecycles**: Read [docs/ARCHITECTURE.md](file:///home/darkside/projects/northwatch/docs/ARCHITECTURE.md) for system boundaries, order lifecycles, webhook idempotency, and database transaction specifications.
 - **Feature specs & domain workflows**: Read [docs/PRD.md](file:///home/darkside/projects/northwatch/docs/PRD.md) when building or modifying customer journeys, features (`cart`, `catalog`, `checkout`, `orders`, `reviews`), or database schemas.
 - **Design system & visual styling**: Read [docs/DESIGN.md](file:///home/darkside/projects/northwatch/docs/DESIGN.md) for complete design tokens, typography scales, spacing, hairline borders, and component specs.
 - **Next.js 16 APIs & breaking changes**: Read the bundled guides in `node_modules/next/dist/docs/`.
 
-## 5. Key Commands
+## 6. Key Commands
 
 - `pnpm dev` — Start development server
 - `pnpm build` — Production build
@@ -55,3 +60,4 @@ Northwatch is a boutique ecommerce storefront for minimalist men's watches built
 - `pnpm drizzle-kit migrate` — Run pending database migrations
 - `pnpm db:studio` — Launch visual Drizzle Studio database browser
 - `pnpm test:e2e` — [TODO] Run Playwright checkout E2E test suite
+  lk
