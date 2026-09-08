@@ -40,17 +40,17 @@ Nothing user-facing yet; this is the scaffolding everything else composes into.
 
 Build the data model and query layer before any UI touches it.
 
-- [ ] Configure `'use cache'` support in `next.config.ts` (`cacheLife`, `cacheTag`) if needed
-- [ ] `features/catalog/schemas.ts` — Zod schemas: Product, Variant (case size, strap, dial color), Price
-- [ ] Finalize `lib/db/schema.ts`: `products`, `product_variants`, `prices` tables + Drizzle relations
-- [ ] Generate & run initial migration (`pnpm drizzle-kit generate` & `pnpm drizzle-kit migrate`)
-- [ ] `features/catalog/queries.ts`:
-  - [ ] `getProducts({ query, filters })` — Postgres `ILIKE` / full-text search across title, reference code, dial parameters (v1 search — no Algolia)
-  - [ ] `getProduct(slug)`
-  - [ ] `getRelatedProducts(productId)`
-- [ ] `lib/cache.ts` — `'use cache'` helpers + cache tags/revalidation for catalog queries
-- [ ] Seed script with a handful of realistic watch SKUs (title, reference code, images, variants, prices) for local dev
-- [ ] **Phase 1 Exit Check**: Seed script executes successfully; running catalog query returns typed watch records from Neon.
+- [x] Configure `'use cache'` support in `next.config.ts` (`cacheLife`, `cacheTag`) if needed (enabled via `cacheComponents: true` per Next.js 16.3+)
+- [x] `features/catalog/schemas.ts` — Zod schemas: Product, Variant (case size, strap, dial color), Price
+- [x] Finalize `lib/db/schema.ts`: `products`, `product_variants` tables + Drizzle relations (ADR 001 embedded price_cents)
+- [x] Generate & run initial migration (`pnpm drizzle-kit generate` & `pnpm drizzle-kit migrate`)
+- [x] `features/catalog/queries.ts`:
+  - [x] `getProducts({ query, filters })` — Postgres `ILIKE` / full-text search across title, reference code, dial parameters (v1 search — no Algolia, ADR 002)
+  - [x] `getProduct(slug)`
+  - [x] `getRelatedProducts(productId)` — movement & case diameter attribute matching with fallback
+- [x] `lib/cache.ts` — `'use cache'` helpers + cache tags/revalidation for catalog queries
+- [x] Seed script with a handful of realistic watch SKUs (title, reference code, images, variants, prices) for local dev
+- [x] **Phase 1 Exit Check**: Seed script executes successfully; running catalog query returns typed watch records from Neon.
 
 ---
 
@@ -67,8 +67,10 @@ _Note: In Next.js 16 / App Router, `params` and `searchParams` in Server Compone
 - [ ] `features/catalog/components/ProductGallery.tsx` and `VariantPicker.tsx`
 - [ ] `app/(shop)/products/[slug]/page.tsx` — PDP: gallery (55%) + spec/action column (45%) on desktop; editorial quote block from static/catalog data (no reviews in v1); `await params`
 - [ ] `app/(shop)/products/[slug]/loading.tsx`
+- [ ] `app/(shop)/not-found.tsx` — branded 404 page (Horological Restraint styling, link back to `/products`)
+- [ ] `app/(shop)/error.tsx` — route error boundary with graceful retry
 - [ ] Sanity check: no business logic or raw DB calls anywhere under `app/`
-- [ ] **Phase 2 Exit Check**: Browse `/`, `/products`, `/products/[slug]` in browser. Verify responsive breakpoints (no single-col catalog grids on mobile) and zero hydration console warnings.
+- [ ] **Phase 2 Exit Check**: Browse `/`, `/products`, `/products/[slug]` in browser. Verify responsive breakpoints (no single-col catalog grids on mobile), 404 page for unknown slugs, and zero hydration console warnings.
 
 ---
 
