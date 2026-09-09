@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter, JetBrains_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
@@ -36,6 +37,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            className:
+              "!bg-surface !border !border-outline !text-on-surface !rounded-none !font-sans !shadow-none !p-4",
+            descriptionClassName: "!text-on-surface-variant !font-sans !text-[12px]",
+          }}
+        />
       </body>
     </html>
   );

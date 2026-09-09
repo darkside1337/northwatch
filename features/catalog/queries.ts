@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@/lib/db/client";
 import { products, productVariants } from "@/lib/db/schema";
 import { eq, ne, and, or, ilike, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
@@ -141,92 +142,91 @@ export async function getProducts(rawFilters?: ProductFilter): Promise<ProductWi
 /**
  * Fetch a single product by its unique slug, including all variants.
  */
-export async function getProductBySlug(slug: string): Promise<ProductWithVariants | null> {
-  "use cache";
-  safeCacheTag(CACHE_TAGS.catalog, CACHE_TAGS.product(slug));
-  safeCacheLife("hours");
+export const getProductBySlug = cache(
+  async (slug: string): Promise<ProductWithVariants | null> => {
+    "use cache";
+    safeCacheTag(CACHE_TAGS.catalog, CACHE_TAGS.product(slug));
+    safeCacheLife("hours");
 
-  const result = await db.query.products.findFirst({
-    where: eq(products.slug, slug),
-    with: {
-      variants: {
-        orderBy: [asc(productVariants.priceCents)],
+    const result = await db.query.products.findFirst({
+      where: eq(products.slug, slug),
+      with: {
+        variants: {
+          orderBy: [asc(productVariants.priceCents)],
+        },
       },
-    },
-  });
+    });
 
-  if (!result) {
-    return null;
+    if (!result) {
+      return null;
+    }
+
+    const parsed = ProductWithVariantsSchema.safeParse(result);
+    if (!parsed.success) {
+      console.error("Failed to parse product schema for slug:", slug, parsed.error);
+      throw new Error(`Data integrity error: product '${slug}' failed schema validation.`);
+    }
+
+    return parsed.data;
   }
-
-  const parsed = ProductWithVariantsSchema.safeParse(result);
-  if (!parsed.success) {
-    console.error("Failed to parse product schema for slug:", slug, parsed.error);
-    throw new Error(`Data integrity error: product '${slug}' failed schema validation.`);
-  }
-
-  return parsed.data;
-}
+);
 
 /**
  * Fetch related products for a given product ID.
  * Heuristic: matches on movement or case diameter first, falling back to other products.
- *
- * TODO: Replace with tag-based / collection similarity in Phase 2
  */
-export async function getRelatedProducts(
-  productId: string,
-  limit: number = 3
-): Promise<ProductWithVariants[]> {
-  "use cache";
-  safeCacheTag(CACHE_TAGS.catalog, CACHE_TAGS.related(productId));
-  safeCacheLife("hours");
+export const getRelatedProducts = cache(
+  async (productId: string, limit: number = 4): Promise<ProductWithVariants[]> => {
+    "use cache";
+    safeCacheTag(CACHE_TAGS.catalog, CACHE_TAGS.related(productId));
+    safeCacheLife("hours");
 
-  const sourceProduct = await db.query.products.findFirst({
-    where: eq(products.id, productId),
-  });
+    const sourceProduct = await db.query.products.findFirst({
+      where: eq(products.id, productId),
+    });
 
-  if (!sourceProduct) {
-    return [];
-  }
+    if (!sourceProduct) {
+      return [];
+    }
 
-  // Find products matching either movement or case diameter (excluding self)
-  const similarProducts = await db.query.products.findMany({
-    where: and(
-      ne(products.id, productId),
-      or(
-        sourceProduct.movement ? eq(products.movement, sourceProduct.movement) : undefined,
-        sourceProduct.caseDiameter ? eq(products.caseDiameter, sourceProduct.caseDiameter) : undefined
-      )
-    ),
-    limit,
-    with: {
-      variants: {
-        orderBy: [asc(productVariants.priceCents)],
+    // Find products matching either movement or case diameter (excluding self)
+    const similarProducts = await db.query.products.findMany({
+      where: and(
+        ne(products.id, productId),
+        or(
+          sourceProduct.movement ? eq(products.movement, sourceProduct.movement) : undefined,
+          sourceProduct.caseDiameter ? eq(products.caseDiameter, sourceProduct.caseDiameter) : undefined
+        )
+      ),
+      limit,
+      with: {
+        variants: {
+          orderBy: [asc(productVariants.priceCents)],
+        },
       },
-    },
-  });
+    });
 
-  if (similarProducts.length >= limit) {
-    return zValidateProducts(similarProducts.slice(0, limit));
-  }
+    if (similarProducts.length >= limit) {
+      return zValidateProducts(similarProducts.slice(0, limit));
+    }
 
-  // If not enough, fill with other products
-  const existingIds = [productId, ...similarProducts.map((p) => p.id)];
-  const remainingLimit = limit - similarProducts.length;
+    // If not enough, fill with other products
+    const existingIds = [productId, ...similarProducts.map((p) => p.id)];
+    const remainingLimit = limit - similarProducts.length;
 
-  const fallbackProducts = await db.query.products.findMany({
-    where: notInArray(products.id, existingIds),
-    limit: remainingLimit,
-    with: {
-      variants: {
-        orderBy: [asc(productVariants.priceCents)],
+    const fallbackProducts = await db.query.products.findMany({
+      where: notInArray(products.id, existingIds),
+      limit: remainingLimit,
+      with: {
+        variants: {
+          orderBy: [asc(productVariants.priceCents)],
+        },
       },
-    },
-  });
+    });
 
-  return zValidateProducts([...similarProducts, ...fallbackProducts]);
-}
+    return zValidateProducts([...similarProducts, ...fallbackProducts]);
+  }
+);
 
 // ============================================================================
 // Internal Helpers

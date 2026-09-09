@@ -104,6 +104,45 @@ export const verification = pgTable(
 // Catalog Domain Tables
 // ============================================================================
 
+export interface ProductSpecs {
+  movement?: {
+    calibre?: string;
+    frequency?: string;
+    jewels?: string;
+    powerReserve?: string;
+    origin?: string;
+  };
+  caseArchitecture?: {
+    material?: string;
+    finish?: string;
+    construction?: string;
+    bezel?: string;
+  };
+  dimensions?: {
+    diameter?: string;
+    height?: string;
+    lugToLug?: string;
+    lugWidth?: string;
+  };
+  crystalOptics?: {
+    crystal?: string;
+    coating?: string;
+    caseback?: string;
+  };
+  waterResistance?: {
+    depth?: string;
+    crown?: string;
+    gaskets?: string;
+  };
+  leatherwork?: {
+    strap?: string;
+    origin?: string;
+    buckle?: string;
+  };
+  tolerance?: string;
+  edition?: string;
+}
+
 export const products = pgTable(
   "products",
   {
@@ -119,6 +158,7 @@ export const products = pgTable(
     waterResistance: text("water_resistance"), // e.g. "100m / 10 ATM"
     editorialQuote: text("editorial_quote"), // Curated v1 editorial quote on PDP
     quoteAuthor: text("quote_author"),
+    specs: jsonb("specs").$type<ProductSpecs>(),
     featured: boolean("featured").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

@@ -34,12 +34,11 @@ export function ProductCard({
   const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
   const isInStock = totalStock > 0;
 
-  // Use local images exclusively (prioritize imageSrc prop, then local image fallback)
+  // Prioritize imageSrc prop, then database-backed variant images, then local studio fallback
   const primaryImage =
     imageSrc ||
-    (defaultVariant?.images?.[0]?.startsWith("/")
-      ? defaultVariant.images[0]
-      : LOCAL_WATCH_IMAGES[0]);
+    defaultVariant?.images?.[0] ||
+    LOCAL_WATCH_IMAGES[0];
 
   // Build concise spec summary: e.g. "38mm · Automatic 4Hz · 10 ATM"
   const specParts = [
@@ -78,7 +77,6 @@ export function ProductCard({
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-contain transition-transform duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-[1.02] motion-reduce:transform-none"
-              priority={product.featured}
             />
           </div>
         </div>

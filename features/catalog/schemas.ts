@@ -14,10 +14,70 @@ export const ProductVariantSchema = z.object({
   caseFinish: z.string().nullable().optional(),
   priceCents: z.number().int().nonnegative("Price must be a non-negative integer in cents"),
   stock: z.number().int().nonnegative("Stock count cannot be negative"),
-  images: z.array(z.string().url()).default([]),
+  images: z
+    .array(
+      z.string().refine(
+        (val) => val.startsWith("/") || z.string().url().safeParse(val).success,
+        { message: "Image must be a valid URL or path starting with /" }
+      )
+    )
+    .default([]),
   createdAt: z.date().or(z.string().datetime({ offset: true })).optional(),
   updatedAt: z.date().or(z.string().datetime({ offset: true })).optional(),
 });
+
+export const ProductSpecsSchema = z.object({
+  movement: z
+    .object({
+      calibre: z.string().optional(),
+      frequency: z.string().optional(),
+      jewels: z.string().optional(),
+      powerReserve: z.string().optional(),
+      origin: z.string().optional(),
+    })
+    .optional(),
+  caseArchitecture: z
+    .object({
+      material: z.string().optional(),
+      finish: z.string().optional(),
+      construction: z.string().optional(),
+      bezel: z.string().optional(),
+    })
+    .optional(),
+  dimensions: z
+    .object({
+      diameter: z.string().optional(),
+      height: z.string().optional(),
+      lugToLug: z.string().optional(),
+      lugWidth: z.string().optional(),
+    })
+    .optional(),
+  crystalOptics: z
+    .object({
+      crystal: z.string().optional(),
+      coating: z.string().optional(),
+      caseback: z.string().optional(),
+    })
+    .optional(),
+  waterResistance: z
+    .object({
+      depth: z.string().optional(),
+      crown: z.string().optional(),
+      gaskets: z.string().optional(),
+    })
+    .optional(),
+  leatherwork: z
+    .object({
+      strap: z.string().optional(),
+      origin: z.string().optional(),
+      buckle: z.string().optional(),
+    })
+    .optional(),
+  tolerance: z.string().optional(),
+  edition: z.string().optional(),
+});
+
+export type ProductSpecs = z.infer<typeof ProductSpecsSchema>;
 
 export const ProductSchema = z.object({
   id: z.string().uuid(),
@@ -30,6 +90,7 @@ export const ProductSchema = z.object({
   waterResistance: z.string().nullable().optional(),
   editorialQuote: z.string().nullable().optional(),
   quoteAuthor: z.string().nullable().optional(),
+  specs: ProductSpecsSchema.nullable().optional(),
   featured: z.boolean().default(false),
   createdAt: z.date().or(z.string().datetime({ offset: true })).optional(),
   updatedAt: z.date().or(z.string().datetime({ offset: true })).optional(),

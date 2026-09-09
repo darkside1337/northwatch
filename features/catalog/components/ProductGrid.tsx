@@ -1,4 +1,4 @@
-import { ProductCard, LOCAL_WATCH_IMAGES } from "./ProductCard";
+import { ProductCard } from "./ProductCard";
 import type { ProductWithVariants } from "../schemas";
 import { cn } from "cn";
 
@@ -15,18 +15,9 @@ export function ProductGrid({ products, className }: ProductGridProps) {
         className
       )}
     >
-      {products.map((product, index) => {
-        // Assign a distinct local studio image from public/images
-        const localImage = LOCAL_WATCH_IMAGES[index % LOCAL_WATCH_IMAGES.length];
-
-        return (
-          <ProductCard
-            key={product.id}
-            product={product}
-            imageSrc={localImage}
-          />
-        );
-      })}
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
     </div>
   );
 }
