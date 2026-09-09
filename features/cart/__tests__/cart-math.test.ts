@@ -5,11 +5,13 @@ import {
   clampQuantity,
   evaluatePromo,
   calculateCartTotals,
+  calculateCartCalculation,
 } from "../math";
 import {
   ThinCartSchema,
   CartItemSchema,
   ApplyPromoInputSchema,
+  StockAdjustmentReasonEnum,
   type CartItem,
 } from "../schemas";
 
@@ -364,17 +366,38 @@ describe("Cart Domain: Zod Schemas Validation", () => {
   });
 
   describe("CartItemSchema", () => {
-    it("validates hydrated CartItem with optional stockAdjustmentNote and originalQuantity", () => {
+    it("validates hydrated CartItem with optional stockAdjustmentReason, stockAdjustmentNote, and originalQuantity", () => {
       const item = createMockItem({
-        originalQuantity: 3,
-        stockAdjustmentNote: "Quantity adjusted from 3 to 1 due to limited available allocation.",
+        originalQuantity: 15,
+        stockAdjustmentReason: "order_cap",
+        stockAdjustmentNote: "Allocation adjusted from 15 to 10 (maximum purchase limit per reference is 10).",
       });
       const parsed = CartItemSchema.safeParse(item);
       expect(parsed.success).toBe(true);
       if (parsed.success) {
-        expect(parsed.data.originalQuantity).toBe(3);
-        expect(parsed.data.stockAdjustmentNote).toContain("Quantity adjusted");
+        expect(parsed.data.originalQuantity).toBe(15);
+        expect(parsed.data.stockAdjustmentReason).toBe("order_cap");
+        expect(parsed.data.stockAdjustmentNote).toContain("maximum purchase limit");
       }
+    });
+
+    it("accepts stock_limit as valid stockAdjustmentReason", () => {
+      const parsed = StockAdjustmentReasonEnum.safeParse("stock_limit");
+      expect(parsed.success).toBe(true);
+      const invalid = StockAdjustmentReasonEnum.safeParse("unknown_reason");
+      expect(invalid.success).toBe(false);
+    });
+  });
+
+  describe("calculateCartCalculation with Empty Cart and Promo", () => {
+    it("evaluates promo code on empty cart and preserves machine-readable failureReason", () => {
+      const { totals, promo } = calculateCartCalculation([], "ATELIER10");
+      expect(totals.totalCents).toBe(0);
+      expect(totals.itemCount).toBe(0);
+      expect(promo).not.toBeNull();
+      expect(promo?.isValid).toBe(false);
+      expect(promo?.discountCents).toBe(0);
+      expect(promo?.failureReason).toBe("Cannot apply discount to an empty bag.");
     });
   });
 

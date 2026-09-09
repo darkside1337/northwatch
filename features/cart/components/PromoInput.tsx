@@ -79,9 +79,42 @@ export function PromoInput() {
     );
   }
 
-  // Case 2: No active promo - render flat hairline input
+  // Case 2: Render flat hairline input (with optional inactive promo callout if promo terms no longer met)
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
+      {promo && !promo.isValid && (
+        <div className="bg-surface-container-low border border-outline p-3 rounded-none flex items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <Tag className="w-3.5 h-3.5 text-on-surface-variant mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-semibold uppercase tracking-wider text-on-surface">
+                  {promo.code}
+                </span>
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-on-surface-variant/40" />
+                <span className="text-[10px] text-on-surface-variant uppercase font-medium">
+                  Requirement Not Met
+                </span>
+              </div>
+              {promo.failureReason && (
+                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                  {promo.failureReason}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={isPending}
+            className="p-1 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none disabled:opacity-50 shrink-0"
+            aria-label={`Remove inactive promo code ${promo.code}`}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"

@@ -91,6 +91,9 @@ export const siteConfig: SiteConfig = {
   },
 };
 
+export const FREE_SHIPPING_THRESHOLD_CENTS =
+  siteConfig.shipping.tiers.standard.freeThreshold ?? 50000;
+
 /**
  * Formats an amount in integer cents into a localized currency string.
  * @example formatPrice(74000) => "$740.00"

@@ -18,10 +18,27 @@ import {
   type ApplyPromoInput,
   type CartState,
   type ThinCart,
+  type ThinCartItem,
 } from "./schemas";
 
 /**
+ * Sanitizes thin cart items by consolidating duplicate entries for the same variantId.
+ * Sums quantities across duplicate entries without premature clamping.
+ */
+function deduplicateThinCartItems(items: ThinCartItem[]): ThinCartItem[] {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    map.set(item.variantId, (map.get(item.variantId) ?? 0) + item.quantity);
+  }
+  return Array.from(map.entries()).map(([variantId, quantity]) => ({
+    variantId,
+    quantity,
+  }));
+}
+
+/**
  * Reads the thin cookie and rehydrates the full cart against Neon Postgres.
+ * INVARIANT: Passive read-only operation — never writes cookies during read paths.
  */
 export async function getCartAction(): Promise<CartState> {
   const thinCart = await getThinCartCookie();
@@ -38,25 +55,28 @@ export async function addToBagAction(
 ): Promise<CartState> {
   const input = AddToCartInputSchema.parse(rawInput);
   const thinCart = await getThinCartCookie();
+  const items = deduplicateThinCartItems(thinCart.items);
 
-  const existingIndex = thinCart.items.findIndex(
+  const existingIndex = items.findIndex(
     (item) => item.variantId === input.variantId
   );
 
   if (existingIndex >= 0) {
-    const existing = thinCart.items[existingIndex];
-    thinCart.items[existingIndex] = {
-      ...existing,
-      quantity: Math.min(10, existing.quantity + input.quantity),
+    // Preserve requested sum without premature clamping so rehydrateCart detects adjustments!
+    items[existingIndex] = {
+      variantId: input.variantId,
+      quantity: items[existingIndex].quantity + input.quantity,
     };
   } else {
-    thinCart.items.push({
+    items.push({
       variantId: input.variantId,
-      quantity: Math.min(10, input.quantity),
+      quantity: input.quantity,
     });
   }
 
-  // Rehydrate against DB (which performs real-time stock clamping)
+  thinCart.items = items;
+
+  // Rehydrate against DB (which performs real-time stock clamping and attaches signals)
   const freshCart = await rehydrateCart(thinCart);
 
   // Sync reconciled quantities back to thin cookie
@@ -83,17 +103,28 @@ export async function updateQuantityAction(
 ): Promise<CartState> {
   const input = UpdateQuantityInputSchema.parse(rawInput);
   const thinCart = await getThinCartCookie();
+  const items = deduplicateThinCartItems(thinCart.items);
 
   if (input.quantity <= 0) {
-    thinCart.items = thinCart.items.filter(
+    thinCart.items = items.filter(
       (item) => item.variantId !== input.variantId
     );
   } else {
-    const existingIndex = thinCart.items.findIndex(
+    const existingIndex = items.findIndex(
       (item) => item.variantId === input.variantId
     );
     if (existingIndex >= 0) {
-      thinCart.items[existingIndex].quantity = Math.min(10, input.quantity);
+      items[existingIndex] = {
+        variantId: input.variantId,
+        quantity: input.quantity,
+      };
+      thinCart.items = items;
+    } else {
+      items.push({
+        variantId: input.variantId,
+        quantity: input.quantity,
+      });
+      thinCart.items = items;
     }
   }
 
@@ -120,8 +151,9 @@ export async function removeFromBagAction(
 ): Promise<CartState> {
   const input = RemoveFromCartInputSchema.parse(rawInput);
   const thinCart = await getThinCartCookie();
+  const items = deduplicateThinCartItems(thinCart.items);
 
-  thinCart.items = thinCart.items.filter(
+  thinCart.items = items.filter(
     (item) => item.variantId !== input.variantId
   );
 
@@ -148,6 +180,7 @@ export async function applyPromoAction(
 ): Promise<CartState> {
   const input = ApplyPromoInputSchema.parse(rawInput);
   const thinCart = await getThinCartCookie();
+  thinCart.items = deduplicateThinCartItems(thinCart.items);
 
   thinCart.promoCode = input.code;
 
@@ -171,6 +204,7 @@ export async function applyPromoAction(
  */
 export async function removePromoAction(): Promise<CartState> {
   const thinCart = await getThinCartCookie();
+  thinCart.items = deduplicateThinCartItems(thinCart.items);
   delete thinCart.promoCode;
 
   const freshCart = await rehydrateCart(thinCart);

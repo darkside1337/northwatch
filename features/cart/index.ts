@@ -3,6 +3,7 @@ export { CartProvider, useCart, useIsHydrated } from "./context";
 
 // UI Components
 export { CartDrawer } from "./components/CartDrawer";
+export { CartReviewView } from "./components/CartReviewView";
 export { LineItem } from "./components/LineItem";
 export { PromoInput } from "./components/PromoInput";
 
@@ -36,6 +37,7 @@ export {
   CartStateSchema,
   RemovedCartItemSchema,
   PromoResultSchema,
+  StockAdjustmentReasonEnum,
   AddToCartInputSchema,
   UpdateQuantityInputSchema,
   RemoveFromCartInputSchema,
@@ -43,6 +45,7 @@ export {
   type ThinCartItem,
   type ThinCart,
   type CartItem,
+  type StockAdjustmentReason,
   type CartTotals,
   type CartState,
   type RemovedCartItem,

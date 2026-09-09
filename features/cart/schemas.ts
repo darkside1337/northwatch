@@ -31,6 +31,9 @@ export type ThinCart = z.infer<typeof ThinCartSchema>;
  * Fully populated item after database rehydration. Includes optional stock
  * adjustment signals for graceful UI degradation when stock is reduced.
  */
+export const StockAdjustmentReasonEnum = z.enum(["stock_limit", "order_cap"]);
+export type StockAdjustmentReason = z.infer<typeof StockAdjustmentReasonEnum>;
+
 export const CartItemSchema = z.object({
   variantId: z.string().uuid("Invalid variant ID"),
   productId: z.string().uuid("Invalid product ID"),
@@ -48,6 +51,7 @@ export const CartItemSchema = z.object({
 
   // Reconciliation signals populated during rehydration if stock changed
   originalQuantity: z.number().int().optional(),
+  stockAdjustmentReason: StockAdjustmentReasonEnum.optional(),
   stockAdjustmentNote: z.string().optional(),
 });
 export type CartItem = z.infer<typeof CartItemSchema>;

@@ -78,7 +78,7 @@ describe("Cart Domain: Rehydration & Stock Clamping", { timeout: 25000 }, () => 
       expect(cart.totals.totalCents).toBe(39500);
     });
 
-    it("clamps requested quantity to maximum purchase cap (10) and attaches note", async () => {
+    it("clamps requested quantity to maximum purchase cap (10) and attaches order_cap note", async () => {
       const thinCart: ThinCart = {
         items: [{ variantId: inStockVariantId, quantity: 25 }],
       };
@@ -89,10 +89,11 @@ describe("Cart Domain: Rehydration & Stock Clamping", { timeout: 25000 }, () => 
       const item = cart.items[0];
       expect(item.quantity).toBe(10); // Clamped to 10
       expect(item.originalQuantity).toBe(25);
-      expect(item.stockAdjustmentNote).toContain("Allocation adjusted from 25 to 10");
+      expect(item.stockAdjustmentReason).toBe("order_cap");
+      expect(item.stockAdjustmentNote).toContain("maximum purchase limit per reference is 10");
     });
 
-    it("omits out-of-stock items (stock: 0) from active purchasable items", async () => {
+    it("omits out-of-stock items (stock: 0) from active purchasable items and asserts reason", async () => {
       const thinCart: ThinCart = {
         items: [{ variantId: outOfStockVariantId, quantity: 1 }],
       };
@@ -101,12 +102,31 @@ describe("Cart Domain: Rehydration & Stock Clamping", { timeout: 25000 }, () => 
       expect(cart.items).toHaveLength(0);
       expect(cart.totals.itemCount).toBe(0);
       expect(cart.totals.totalCents).toBe(0);
+      expect(cart.removedItems).toHaveLength(1);
+      expect(cart.removedItems[0]).toMatchObject({
+        variantId: outOfStockVariantId,
+        reason: "out_of_stock",
+      });
     });
 
-    it("gracefully omits non-existent or deleted variant IDs without crashing", async () => {
+    it("strictly short-circuits availableStock === 0 to removedItems and NEVER enters cart.items with clamp reason", async () => {
+      const thinCart: ThinCart = {
+        items: [{ variantId: outOfStockVariantId, quantity: 5 }],
+      };
+
+      const cart = await rehydrateCart(thinCart);
+      expect(cart.items).toHaveLength(0);
+      // Assert zero-stock item never appears in cart.items with a clamp reason attached
+      expect(cart.items.some((i) => i.variantId === outOfStockVariantId)).toBe(false);
+      expect(cart.removedItems).toHaveLength(1);
+      expect(cart.removedItems[0].reason).toBe("out_of_stock");
+    });
+
+    it("gracefully omits non-existent or deleted variant IDs without crashing and reports discontinued", async () => {
+      const ghostId = "00000000-0000-4000-8000-000000000999";
       const thinCart: ThinCart = {
         items: [
-          { variantId: "00000000-0000-4000-8000-000000000999", quantity: 1 },
+          { variantId: ghostId, quantity: 1 },
           { variantId: inStockVariantId, quantity: 1 },
         ],
       };
@@ -115,6 +135,19 @@ describe("Cart Domain: Rehydration & Stock Clamping", { timeout: 25000 }, () => 
       // Only the real variant survives
       expect(cart.items).toHaveLength(1);
       expect(cart.items[0].variantId).toBe(inStockVariantId);
+      expect(cart.removedItems).toHaveLength(1);
+      expect(cart.removedItems[0]).toMatchObject({
+        variantId: ghostId,
+        reason: "discontinued",
+      });
+    });
+
+    it("evaluates promo code on empty cart rehydration without swallowing failureReason", async () => {
+      const cart = await rehydrateCart({ items: [], promoCode: "ATELIER10" });
+      expect(cart.items).toHaveLength(0);
+      expect(cart.promo).not.toBeNull();
+      expect(cart.promo?.isValid).toBe(false);
+      expect(cart.promo?.failureReason).toBe("Cannot apply discount to an empty bag.");
     });
 
     it("evaluates promo code deterministically against rehydrated database totals", async () => {
@@ -251,7 +284,7 @@ describe("Cart Domain: Rehydration & Stock Clamping", { timeout: 25000 }, () => 
       expect(cart.items[0].quantity).toBe(3);
     });
 
-    it("clamps the AGGREGATE quantity after merging duplicates, not before", async () => {
+    it("clamps the AGGREGATE quantity after merging duplicates, not before, and records order_cap reason", async () => {
       const thinCart: ThinCart = {
         items: [
           { variantId: inStockVariantId, quantity: 6 },
@@ -263,6 +296,29 @@ describe("Cart Domain: Rehydration & Stock Clamping", { timeout: 25000 }, () => 
 
       expect(cart.items).toHaveLength(1);
       expect(cart.items[0].quantity).toBe(10); // merged to 13, clamped to 10
+      expect(cart.items[0].originalQuantity).toBe(13);
+      expect(cart.items[0].stockAdjustmentReason).toBe("order_cap");
+      expect(cart.items[0].stockAdjustmentNote).toContain("maximum purchase limit");
+    });
+  });
+
+  describe("Adversarial Combinations: Promo Threshold Invalidation upon Clamping", () => {
+    it("deactivates NORTH50 when clamped subtotal drops below $400.00 requirement", async () => {
+      // NW-01-FLD-BLK-CAN is $380.00 (38000 cents).
+      // Requesting 1x item produces $380.00 subtotal, which is < $400.00 threshold for NORTH50.
+      const thinCart: ThinCart = {
+        items: [{ variantId: inStockVariantId, quantity: 1 }],
+        promoCode: "NORTH50",
+      };
+
+      const cart = await rehydrateCart(thinCart);
+      expect(cart.totals.subtotalCents).toBe(38000);
+      expect(cart.promo?.isValid).toBe(false);
+      expect(cart.promo?.discountCents).toBe(0);
+      expect(cart.promo?.failureReason).toContain("$400.00");
+      expect(cart.totals.discountCents).toBe(0);
+      expect(cart.totals.shippingEstimateCents).toBe(1500); // Standard shipping applied
+      expect(cart.totals.totalCents).toBe(39500); // 38000 + 1500
     });
   });
 });

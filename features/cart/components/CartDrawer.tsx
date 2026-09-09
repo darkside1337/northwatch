@@ -5,12 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X, ArrowRight, AlertCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { formatPrice } from "@/config/site";
+import { formatPrice, FREE_SHIPPING_THRESHOLD_CENTS } from "@/config/site";
 import { useCart } from "../context";
 import { LineItem } from "./LineItem";
 import { PromoInput } from "./PromoInput";
-
-const FREE_SHIPPING_THRESHOLD_CENTS = 50000; // $500.00
 
 export function CartDrawer() {
   const router = useRouter();
@@ -24,6 +22,10 @@ export function CartDrawer() {
     itemCount,
     isPending,
   } = useCart();
+  const [dismissedVariantIds, setDismissedVariantIds] = React.useState<string[]>([]);
+  const visibleRemovedItems = removedItems.filter(
+    (item) => !dismissedVariantIds.includes(item.variantId)
+  );
 
   const isFreeShipping =
     totals.shippingEstimateCents === 0 || promo?.freeShipping;
@@ -100,14 +102,29 @@ export function CartDrawer() {
         )}
 
         {/* 3. REMOVED ITEMS NOTICES (Depleted / Discontinued) */}
-        {removedItems.length > 0 && (
+        {visibleRemovedItems.length > 0 && (
           <div className="mx-7 mt-4 p-3 bg-surface-container-low border border-outline space-y-2">
-            <div className="flex items-center gap-2 text-xs font-mono uppercase text-on-surface font-semibold tracking-wider">
-              <AlertCircle className="w-3.5 h-3.5 text-accent-olive" />
-              <span>Inventory Notice</span>
+            <div className="flex items-center justify-between text-xs font-mono uppercase text-on-surface font-semibold tracking-wider">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-3.5 h-3.5 text-accent-olive" />
+                <span>Inventory Notice</span>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setDismissedVariantIds((prev) => [
+                    ...prev,
+                    ...visibleRemovedItems.map((i) => i.variantId),
+                  ])
+                }
+                className="text-on-surface-variant hover:text-on-surface p-0.5 transition-colors focus:outline-none"
+                aria-label="Dismiss inventory notice"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
             <ul className="space-y-1 text-[11px] font-mono text-on-surface-variant leading-relaxed">
-              {removedItems.map((removed, idx) => (
+              {visibleRemovedItems.map((removed, idx) => (
                 <li key={`${removed.variantId}-${idx}`}>
                   {removed.reason === "out_of_stock"
                     ? `${
