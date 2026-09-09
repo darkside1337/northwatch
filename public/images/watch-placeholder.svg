@@ -1,0 +1,32 @@
+<svg width="400" height="500" viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="500" fill="#FAF9F6"/>
+  <rect x="0.5" y="0.5" width="399" height="499" stroke="#DCD8D0" stroke-width="1"/>
+
+  <!-- Architectural Corner Reticles -->
+  <path d="M 12 8 V 16 M 8 12 H 16" stroke="#595854" stroke-width="1"/>
+  <path d="M 388 8 V 16 M 384 12 H 392" stroke="#595854" stroke-width="1"/>
+  <path d="M 12 484 V 492 M 8 488 H 16" stroke="#595854" stroke-width="1"/>
+  <path d="M 388 484 V 492 M 384 488 H 392" stroke="#595854" stroke-width="1"/>
+
+  <!-- Top & Bottom Strap Geometry -->
+  <rect x="160" y="80" width="80" height="90" fill="#F4F3F0" stroke="#DCD8D0" stroke-width="1"/>
+  <rect x="160" y="330" width="80" height="90" fill="#F4F3F0" stroke="#DCD8D0" stroke-width="1"/>
+
+  <!-- Minimalist Watch Case Geometry -->
+  <circle cx="200" cy="250" r="90" fill="#FFFFFF" stroke="#141413" stroke-width="1.5"/>
+  <circle cx="200" cy="250" r="82" fill="none" stroke="#DCD8D0" stroke-width="1"/>
+  <circle cx="200" cy="250" r="76" fill="#FAF9F6" stroke="#DCD8D0" stroke-width="0.75" stroke-dasharray="2 4"/>
+
+  <!-- Knurled Crown -->
+  <rect x="290" y="244" width="8" height="12" fill="#FFFFFF" stroke="#141413" stroke-width="1"/>
+
+  <!-- Hands at 10:10 -->
+  <line x1="200" y1="250" x2="165" y2="195" stroke="#141413" stroke-width="2" stroke-linecap="square"/>
+  <line x1="200" y1="250" x2="245" y2="195" stroke="#141413" stroke-width="1.5" stroke-linecap="square"/>
+  <circle cx="200" cy="250" r="3" fill="#141413"/>
+
+  <!-- Horological Specimen Placeholder Stamp -->
+  <rect x="100" y="440" width="200" height="24" fill="#FFFFFF" stroke="#DCD8D0" stroke-width="1"/>
+  <text x="200" y="456" fill="#595854" font-family="monospace" font-size="9" text-anchor="middle" letter-spacing="0.15em">SPECIMEN // PENDING</text>
+</svg>

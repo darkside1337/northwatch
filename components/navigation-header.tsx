@@ -10,6 +10,7 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
+import { useCart, useIsHydrated } from "@/features/cart";
 import { cn } from "cn";
 
 interface NavigationHeaderProps {
@@ -56,6 +57,10 @@ function NavigationHeaderInner({
 }: NavigationHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { openCart, itemCount } = useCart();
+  const isHydrated = useIsHydrated();
+  const displayCount = isHydrated ? itemCount : cartItemCount;
+
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -143,11 +148,12 @@ function NavigationHeaderInner({
           {/* Cart Trigger */}
           <button
             type="button"
-            className="flex items-center gap-1.5 text-on-surface hover:text-accent transition-colors p-1 select-none"
-            aria-label={`Shopping Bag, ${cartItemCount} items`}
+            onClick={openCart}
+            className="flex items-center gap-1.5 text-on-surface hover:text-accent transition-colors p-1 select-none focus:outline-none"
+            aria-label={`Shopping Bag, ${displayCount} items`}
           >
-            <span className="font-mono text-xs uppercase tracking-[0.1em] font-medium">
-              Bag [{cartItemCount}]
+            <span className="font-mono text-xs uppercase tracking-[0.1em] font-medium tabular-nums">
+              Bag [{displayCount}]
             </span>
           </button>
 
@@ -245,6 +251,26 @@ function NavigationHeaderInner({
                         );
                       })}
 
+                      {/* Bag Trigger in Mobile Drawer */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          openCart();
+                        }}
+                        className="group flex items-baseline justify-between py-3.5 border-b border-outline transition-colors text-on-surface hover:border-on-surface w-full text-left focus:outline-none"
+                      >
+                        <div className="flex items-baseline space-x-4">
+                          <span className="font-mono text-[11px] text-on-surface-variant group-hover:text-accent transition-colors tracking-widest">
+                            05
+                          </span>
+                          <span className="font-serif text-[22px] font-normal tracking-[0.14em] uppercase group-hover:translate-x-1 transition-transform inline-block">
+                            Bag [{displayCount}]
+                          </span>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface transition-colors" />
+                      </button>
+
                       {/* Account Link in Drawer */}
                       <Link
                         href="/account/orders"
@@ -253,7 +279,7 @@ function NavigationHeaderInner({
                       >
                         <div className="flex items-baseline space-x-4">
                           <span className="font-mono text-[11px] text-on-surface-variant group-hover:text-accent transition-colors tracking-widest">
-                            05
+                            06
                           </span>
                           <span className="font-serif text-[22px] font-normal tracking-[0.14em] uppercase group-hover:translate-x-1 transition-transform inline-block">
                             Account

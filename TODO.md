@@ -77,15 +77,16 @@ _Note: In Next.js 16 / App Router, `params` and `searchParams` in Server Compone
 ## Phase 3 — Cart
 
 - [x] `features/cart/schemas.ts` — Zod for line items
-- [ ] `features/cart/context.tsx` — React Context cart provider (per ARCHITECTURE.md: no external state lib)
-  - [ ] **Hydration guard**: do not read cookie/localStorage synchronously on first render; (re)hydrate inside `useEffect` to avoid SSR/client mismatch
-  - [ ] Persist cart identity via cookie set on first "Add to Bag"
-- [ ] `features/cart/actions.ts` — `addItem`, `updateQty`, `removeItem`, `applyPromo` (`'use server'`, Zod-validated)
-- [ ] `features/cart/components/CartDrawer.tsx` — slide-out per DESIGN.md (440px, right-flush, scrim no blur, sticky footer with subtotal + checkout CTA)
-- [ ] `features/cart/components/LineItem.tsx`, `PromoInput.tsx`
+- [x] `features/cart/context.tsx` — React Context cart provider (per ARCHITECTURE.md: no external state lib)
+  - [x] **Hydration guard**: do not read cookie/localStorage synchronously on first render; hydration safe via `useSyncExternalStore` to eliminate SSR/client mismatch
+  - [x] Persist cart identity via cookie set on first "Add to Bag"
+- [x] `features/cart/actions.ts` — `addItem`, `updateQty`, `removeItem`, `applyPromo` (`'use server'`, Zod-validated)
+- [x] `features/cart/components/CartDrawer.tsx` — slide-out per DESIGN.md (440px, right-flush, scrim no blur, sticky footer with subtotal + checkout CTA)
+- [x] `features/cart/components/LineItem.tsx`, `PromoInput.tsx`
 - [x] `features/cart/__tests__/cart-math.test.ts` — Vitest unit tests for line item calculations, subtotal accumulation, and quantity guards
+- [x] `features/cart/__tests__/cart-rehydration.test.ts` — Vitest tests for DB rehydration, stock clamping, promo validation, and 0-DB badge counts
 - [ ] `app/(shop)/cart/page.tsx` — full cart review page (in addition to drawer)
-- [ ] Wire "Add to Bag" button on PDP → cart context → opens drawer
+- [x] Wire "Add to Bag" button on PDP → cart context → opens drawer
 - [ ] **Phase 3 Exit Check**: Add watch to bag; refresh page to confirm no SSR hydration crash; verify drawer updates and cart ID cookie persists.
 
 ---

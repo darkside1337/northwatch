@@ -165,20 +165,23 @@ export function evaluatePromo(
 }
 
 /**
- * Assembles complete server-authoritative totals for the cart.
+ * Assembles complete server-authoritative totals and promo resolution for the cart.
+ * Guarantees single-pass promo evaluation against honest pre-discount shipping,
+ * preventing duplicate evaluation traps or description mismatch.
  */
-export function calculateCartTotals(
+export function calculateCartCalculation(
   items: CartItem[],
   promoCode?: string | null,
   shippingTierId: ShippingTierId = "standard"
-): CartTotals {
+): { totals: CartTotals; promo: PromoResult | null } {
   const subtotalCents = calculateSubtotal(items);
   const itemCount = calculateItemCount(items);
 
   // Empty cart has zero shipping
-  const baseShippingCents = items.length === 0 ? 0 : calculateShipping(shippingTierId, subtotalCents);
+  const baseShippingCents =
+    items.length === 0 ? 0 : calculateShipping(shippingTierId, subtotalCents);
 
-  // Evaluate promo against subtotal and shipping context
+  // Evaluate promo against subtotal and honest base shipping context
   const promo = evaluatePromo(promoCode, subtotalCents, baseShippingCents);
 
   let discountCents = 0;
@@ -196,10 +199,26 @@ export function calculateCartTotals(
   const totalCents = discountedSubtotal + shippingEstimateCents;
 
   return {
-    subtotalCents,
-    discountCents,
-    shippingEstimateCents,
-    totalCents,
-    itemCount,
+    totals: {
+      subtotalCents,
+      discountCents,
+      shippingEstimateCents,
+      totalCents,
+      itemCount,
+    },
+    promo,
   };
 }
+
+/**
+ * @deprecated Prefer `calculateCartCalculation()` which returns both `totals` and `promo` in a single pass.
+ * Calling `calculateCartTotals()` and `evaluatePromo()` separately can cause promotional description drift (e.g. GENEVA).
+ */
+export function calculateCartTotals(
+  items: CartItem[],
+  promoCode?: string | null,
+  shippingTierId: ShippingTierId = "standard"
+): CartTotals {
+  return calculateCartCalculation(items, promoCode, shippingTierId).totals;
+}
+

@@ -86,8 +86,20 @@ export const CartTotalsSchema = z.object({
 });
 export type CartTotals = z.infer<typeof CartTotalsSchema>;
 
+export const RemovedCartItemReasonEnum = z.enum(["out_of_stock", "discontinued"]);
+export type RemovedCartItemReason = z.infer<typeof RemovedCartItemReasonEnum>;
+
+export const RemovedCartItemSchema = z.object({
+  variantId: z.string().uuid("Invalid variant ID"),
+  reason: RemovedCartItemReasonEnum,
+  title: z.string().optional(),
+  sku: z.string().optional(),
+});
+export type RemovedCartItem = z.infer<typeof RemovedCartItemSchema>;
+
 export const CartStateSchema = z.object({
   items: z.array(CartItemSchema),
+  removedItems: z.array(RemovedCartItemSchema).default([]),
   totals: CartTotalsSchema,
   promo: PromoResultSchema.nullable().optional(),
   isPending: z.boolean().default(false),

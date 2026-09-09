@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { ProductWithVariants, ProductVariant, formatPriceCents } from "../schemas";
+import { useCart } from "@/features/cart";
 
 interface VariantPickerProps {
   product: ProductWithVariants;
@@ -15,6 +16,7 @@ export function VariantPicker({
   selectedVariant,
   onVariantChange,
 }: VariantPickerProps) {
+  const { addItem, openCart, isPending: isCartPending } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [isArchived, setIsArchived] = useState(false);
@@ -54,17 +56,22 @@ export function VariantPicker({
     }
   };
 
-  const handleAddToBag = () => {
-    if (isOutOfStock) return;
+  const handleAddToBag = async () => {
+    if (isOutOfStock || isCartPending) return;
 
-    setIsAdded(true);
-    toast.success("Added to Bag", {
-      description: `${product.title} (${selectedVariant.name}) staged for acquisition.`,
-    });
-
-    setTimeout(() => {
-      setIsAdded(false);
-    }, 2000);
+    try {
+      await addItem(selectedVariant.id, quantity);
+      setIsAdded(true);
+      openCart();
+      setTimeout(() => {
+        setIsAdded(false);
+      }, 2000);
+    } catch (err) {
+      toast.error("Unable to add to bag", {
+        description:
+          err instanceof Error ? err.message : "Inventory allocation failed.",
+      });
+    }
   };
 
   const handleSaveToArchive = () => {
@@ -278,17 +285,25 @@ export function VariantPicker({
         {/* Primary Acquisition CTA */}
         <button
           type="button"
-          disabled={isOutOfStock}
+          disabled={isOutOfStock || isCartPending}
           onClick={handleAddToBag}
-          className={`w-full py-4 px-6 text-[13px] font-semibold tracking-[0.16em] uppercase rounded-none transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-on-surface ${
+          className={`w-full py-4 px-6 text-[13px] font-semibold tracking-[0.16em] uppercase rounded-none transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-on-surface select-none ${
             isOutOfStock
               ? "bg-outline text-on-surface-variant/60 cursor-not-allowed border border-outline"
+              : isCartPending
+              ? "bg-[#2A2A28] text-white opacity-80 cursor-wait"
               : isAdded
               ? "bg-accent-olive text-white active:scale-[0.98]"
               : "bg-on-surface text-white hover:bg-[#2A2A28] active:scale-[0.98]"
           }`}
         >
-          {isOutOfStock ? "OUT OF STOCK" : isAdded ? "ADDED TO BAG ✓" : `ADD TO BAG — ${totalPrice}`}
+          {isOutOfStock
+            ? "OUT OF STOCK"
+            : isCartPending
+            ? "RESERVING REFERENCE..."
+            : isAdded
+            ? "ADDED TO BAG ✓"
+            : `ADD TO BAG — ${totalPrice}`}
         </button>
 
         {/* Secondary Actions */}
