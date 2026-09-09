@@ -37,6 +37,9 @@ Northwatch is a boutique ecommerce storefront for minimalist men's watches built
 4. **Auth gating in proxy.ts**: Route protection for `/account` and `/checkout` lives in `proxy.ts`, **never** `middleware.ts`.
 5. **Schema changes via migrations**: Drizzle schema updates must use migration files generated via Drizzle Kit.
 6. **E2E checkout test must never break**: The checkout flow (`e2e/checkout.spec.ts`) is critical path [TODO: test runner setup pending].
+7. **Mobile-First Delivery**: All UI primitives, pages, and components must be authored and verified mobile-first. Base Tailwind classes target mobile viewports (<640px), with `md:` and `lg:` reserved strictly for progressive desktop enhancement. No single-column catalog grids on mobile per DESIGN.md.
+8. **Componentize Repeated UI & Map Over Data**: Never write duplicate repeating JSX structures inline. Whenever a visual pattern, section layout, or element repeats (or can be reused across views like section headers, product grids, spec matrices, cards), extract it into a dedicated component with typed props and render using `.map()` over structured data.
+9. **Prioritize Local Assets (Temporary — Pre-DB Population)**: Always prioritize and use local assets in `public/images/` over remote placeholder URLs. Once the database is populated with production product asset URLs, components will transition to database-backed images.
 
 ## 4. Git & Commit Workflow
 
