@@ -85,9 +85,9 @@ _Note: In Next.js 16 / App Router, `params` and `searchParams` in Server Compone
 - [x] `features/cart/components/LineItem.tsx`, `PromoInput.tsx`
 - [x] `features/cart/__tests__/cart-math.test.ts` — Vitest unit tests for line item calculations, subtotal accumulation, and quantity guards
 - [x] `features/cart/__tests__/cart-rehydration.test.ts` — Vitest tests for DB rehydration, stock clamping, promo validation, and 0-DB badge counts
-- [ ] `app/(shop)/cart/page.tsx` — full cart review page (in addition to drawer)
+- [x] `app/(shop)/cart/page.tsx` — full cart review page (in addition to drawer)
 - [x] Wire "Add to Bag" button on PDP → cart context → opens drawer
-- [ ] **Phase 3 Exit Check**: Add watch to bag; refresh page to confirm no SSR hydration crash; verify drawer updates and cart ID cookie persists.
+- [x] **Phase 3 Exit Check**: Add watch to bag; refresh page to confirm no SSR hydration crash; verify drawer updates and cart ID cookie persists.
 
 ---
 
