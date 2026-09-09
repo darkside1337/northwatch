@@ -15,6 +15,7 @@ Architectural boundaries, directory structure, and data flow invariants for Nort
 7. **Validate All Trust Boundaries**: Every server action, route handler, and webhook payload is validated with Zod before use — no exceptions.
 8. **Migrations-Only Schema Changes**: Drizzle schema updates are made exclusively through migration files generated via Drizzle Kit (`pnpm drizzle-kit generate` → `pnpm drizzle-kit migrate`). No manual/direct database edits.
 9. **Checkout E2E Is Critical Path**: `e2e/checkout.spec.ts` protects the purchase flow end-to-end and must be kept passing [TODO: test runner setup pending]. A failing checkout test blocks merge.
+10. **Mobile-First Delivery**: All UI primitives, pages, and components must be authored and verified mobile-first. Base Tailwind classes target mobile viewports (<640px), with `md:` and `lg:` reserved strictly for progressive desktop enhancement. No single-column catalog grids on mobile per DESIGN.md.
 
 ---
 

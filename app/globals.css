@@ -18,6 +18,7 @@
   --color-outline: var(--outline);
   --color-outline-variant: var(--outline-variant);
   --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
   --color-accent-muted: var(--accent-muted);
   --color-error: var(--error);
 
@@ -62,6 +63,12 @@
   /* Spacing Scale */
   --spacing-section-sm: 96px;
   --spacing-section-lg: 128px;
+
+  /* Motion & Easing Tokens */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-optical: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @utility text-wordmark {
