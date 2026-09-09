@@ -64,26 +64,26 @@ _Note: In Next.js 16 / App Router, `params` and `searchParams` in Server Compone
 - [x] `features/catalog/components/ProductCard.tsx` — per DESIGN.md spec (1:1/4:5 image, mono reference tag, serif title, spec line, price + stock pip)
 - [x] `app/(shop)/page.tsx` — homepage: hero + featured products, composed from `features/catalog` (thin, no direct DB calls)
 - [x] `app/(shop)/products/page.tsx` — listing grid (3–4 col desktop, 2 col tablet/mobile per breakpoint rules) + filters, `await searchParams` for search/filter state
-- [ ] `features/catalog/components/ProductGallery.tsx` and `VariantPicker.tsx`
-- [ ] `app/(shop)/products/[slug]/page.tsx` — PDP: gallery (55%) + spec/action column (45%) on desktop; editorial quote block from static/catalog data (no reviews in v1); `await params`
-- [ ] `app/(shop)/products/[slug]/loading.tsx`
-- [ ] `app/(shop)/not-found.tsx` — branded 404 page (Horological Restraint styling, link back to `/products`)
-- [ ] `app/(shop)/error.tsx` — route error boundary with graceful retry
-- [ ] Sanity check: no business logic or raw DB calls anywhere under `app/`
-- [ ] **Phase 2 Exit Check**: Browse `/`, `/products`, `/products/[slug]` in browser. Verify responsive breakpoints (no single-col catalog grids on mobile), 404 page for unknown slugs, and zero hydration console warnings.
+- [x] `features/catalog/components/ProductGallery.tsx` and `VariantPicker.tsx`
+- [x] `app/(shop)/products/[slug]/page.tsx` — PDP: gallery (55%) + spec/action column (45%) on desktop; editorial quote block from static/catalog data (no reviews in v1); `await params`
+- [x] `app/(shop)/products/[slug]/loading.tsx`
+- [x] `app/(shop)/not-found.tsx` — branded 404 page (Horological Restraint styling, link back to `/products`)
+- [x] `app/(shop)/error.tsx` — route error boundary with graceful retry
+- [x] Sanity check: no business logic or raw DB calls anywhere under `app/`
+- [x] **Phase 2 Exit Check**: Browse `/`, `/products`, `/products/[slug]` in browser. Verify responsive breakpoints (no single-col catalog grids on mobile), 404 page for unknown slugs, and zero hydration console warnings.
 
 ---
 
 ## Phase 3 — Cart
 
-- [ ] `features/cart/schemas.ts` — Zod for line items
+- [x] `features/cart/schemas.ts` — Zod for line items
 - [ ] `features/cart/context.tsx` — React Context cart provider (per ARCHITECTURE.md: no external state lib)
   - [ ] **Hydration guard**: do not read cookie/localStorage synchronously on first render; (re)hydrate inside `useEffect` to avoid SSR/client mismatch
   - [ ] Persist cart identity via cookie set on first "Add to Bag"
 - [ ] `features/cart/actions.ts` — `addItem`, `updateQty`, `removeItem`, `applyPromo` (`'use server'`, Zod-validated)
 - [ ] `features/cart/components/CartDrawer.tsx` — slide-out per DESIGN.md (440px, right-flush, scrim no blur, sticky footer with subtotal + checkout CTA)
 - [ ] `features/cart/components/LineItem.tsx`, `PromoInput.tsx`
-- [ ] `features/cart/__tests__/cart-math.test.ts` — Vitest unit tests for line item calculations, subtotal accumulation, and quantity guards
+- [x] `features/cart/__tests__/cart-math.test.ts` — Vitest unit tests for line item calculations, subtotal accumulation, and quantity guards
 - [ ] `app/(shop)/cart/page.tsx` — full cart review page (in addition to drawer)
 - [ ] Wire "Add to Bag" button on PDP → cart context → opens drawer
 - [ ] **Phase 3 Exit Check**: Add watch to bag; refresh page to confirm no SSR hydration crash; verify drawer updates and cart ID cookie persists.
