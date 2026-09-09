@@ -47,11 +47,12 @@ export const ProductSortOption = z.enum(["featured", "price_asc", "price_desc", 
 export type ProductSortOption = z.infer<typeof ProductSortOption>;
 
 export const ProductFilterSchema = z.object({
-  // Note: 'query' is temporary in v1 per ADR 002 and will be deleted in Phase 2
+  // Note: 'query' is temporary in v1 per ADR 002 and will be replaced by Algolia in a later phase
   query: z.string().trim().optional(),
   dialColor: z.string().trim().optional(),
   strapMaterial: z.string().trim().optional(),
   caseDiameter: z.string().trim().optional(),
+  movement: z.string().trim().optional(),
   minPrice: z.coerce.number().int().nonnegative().optional(),
   maxPrice: z.coerce.number().int().nonnegative().optional(),
   sort: ProductSortOption.default("featured").optional(),

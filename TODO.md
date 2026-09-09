@@ -63,7 +63,7 @@ _Note: In Next.js 16 / App Router, `params` and `searchParams` in Server Compone
 - [x] Navigation header (`app/(shop)/layout.tsx`): 64px fixed height, wordmark + accent pip, center nav links, right-side utilities (search toggle, account icon, cart trigger with `BAG [0]`)
 - [x] `features/catalog/components/ProductCard.tsx` — per DESIGN.md spec (1:1/4:5 image, mono reference tag, serif title, spec line, price + stock pip)
 - [x] `app/(shop)/page.tsx` — homepage: hero + featured products, composed from `features/catalog` (thin, no direct DB calls)
-- [ ] `app/(shop)/products/page.tsx` — listing grid (3–4 col desktop, 2 col tablet/mobile per breakpoint rules) + filters, `await searchParams` for search/filter state
+- [x] `app/(shop)/products/page.tsx` — listing grid (3–4 col desktop, 2 col tablet/mobile per breakpoint rules) + filters, `await searchParams` for search/filter state
 - [ ] `features/catalog/components/ProductGallery.tsx` and `VariantPicker.tsx`
 - [ ] `app/(shop)/products/[slug]/page.tsx` — PDP: gallery (55%) + spec/action column (45%) on desktop; editorial quote block from static/catalog data (no reviews in v1); `await params`
 - [ ] `app/(shop)/products/[slug]/loading.tsx`

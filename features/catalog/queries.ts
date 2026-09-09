@@ -10,10 +10,18 @@ import {
 import { CACHE_TAGS, safeCacheTag, safeCacheLife } from "@/lib/cache";
 
 /**
+ * Escape wildcard characters in user-provided search strings for ILIKE queries.
+ */
+function escapeLike(str: string): string {
+  return str.replace(/[%_\\]/g, "\\$&");
+}
+
+/**
  * Fetch a list of products with their variants based on filters and sorting.
  *
  * NOTE: Per ADR 002, the 'query' free-text search is temporary in v1 backed by
- * Postgres ILIKE and will be deleted in Phase 2 when Algolia is integrated.
+ * Postgres ILIKE and will be swapped for a dedicated Algolia search index in a later phase.
+ * Do not add pg_trgm indexes or database-specific search optimizations here.
  */
 export async function getProducts(rawFilters?: ProductFilter): Promise<ProductWithVariants[]> {
   "use cache";
@@ -25,9 +33,9 @@ export async function getProducts(rawFilters?: ProductFilter): Promise<ProductWi
   // 1. Build product-level WHERE conditions
   const productConditions = [];
 
-  // Free-text search across title, referenceCode, and description (ADR 002)
+  // Free-text search across title, referenceCode, and description (ADR 002, temporary ILIKE)
   if (filters.query) {
-    const searchPattern = `%${filters.query}%`;
+    const searchPattern = `%${escapeLike(filters.query)}%`;
     productConditions.push(
       or(
         ilike(products.title, searchPattern),
@@ -37,8 +45,18 @@ export async function getProducts(rawFilters?: ProductFilter): Promise<ProductWi
     );
   }
 
+  // Exact-match specification filters
   if (filters.caseDiameter) {
     productConditions.push(eq(products.caseDiameter, filters.caseDiameter));
+  }
+
+  if (filters.movement) {
+    productConditions.push(
+      or(
+        eq(products.movement, filters.movement),
+        ilike(products.movement, `%${escapeLike(filters.movement)}%`)
+      )
+    );
   }
 
   // 2. Build variant-level subquery conditions if variant filters are present
@@ -53,10 +71,10 @@ export async function getProducts(rawFilters?: ProductFilter): Promise<ProductWi
     const variantConditions = [];
 
     if (filters.dialColor) {
-      variantConditions.push(ilike(productVariants.dialColor, filters.dialColor));
+      variantConditions.push(eq(productVariants.dialColor, filters.dialColor));
     }
     if (filters.strapMaterial) {
-      variantConditions.push(ilike(productVariants.strapMaterial, filters.strapMaterial));
+      variantConditions.push(eq(productVariants.strapMaterial, filters.strapMaterial));
     }
     if (filters.minPrice !== undefined) {
       variantConditions.push(gte(productVariants.priceCents, filters.minPrice));
