@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/config/site";
+import { cn } from "cn";
 import { useCart } from "../context";
 import type { CartItem } from "../schemas";
 
@@ -14,6 +15,7 @@ interface LineItemProps {
 
 export function LineItem({ item, onItemClick }: LineItemProps) {
   const { updateQuantity, removeItem, isPending } = useCart();
+  const [isExiting, setIsExiting] = React.useState(false);
   const [imgSrc, setImgSrc] = React.useState(
     item.image || "/images/watch-placeholder.svg"
   );
@@ -41,12 +43,29 @@ export function LineItem({ item, onItemClick }: LineItemProps) {
   };
 
   const handleRemove = async () => {
-    if (isPending) return;
-    await removeItem(item.variantId);
+    if (isPending || isExiting) return;
+    setIsExiting(true);
+    setTimeout(async () => {
+      await removeItem(item.variantId);
+    }, 200);
   };
 
   return (
-    <article className="flex gap-4 py-4 group">
+    <div
+      className={cn(
+        "grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
+        isExiting
+          ? "grid-rows-[0fr] opacity-0 !border-transparent pointer-events-none"
+          : "grid-rows-[1fr] opacity-100"
+      )}
+    >
+      <div className="overflow-hidden">
+        <article
+          className={cn(
+            "flex gap-4 py-4 group transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transform-none",
+            isExiting && "scale-[0.96] pointer-events-none"
+          )}
+        >
       {/* 1. Thumbnail Container (Boxed with hairline border) */}
       <div className="w-20 h-24 sm:w-24 sm:h-24 flex-shrink-0 bg-surface-container-lowest border border-outline flex items-center justify-center p-2 relative overflow-hidden">
         <Link
@@ -114,8 +133,8 @@ export function LineItem({ item, onItemClick }: LineItemProps) {
             <button
               type="button"
               onClick={handleDecrement}
-              disabled={!canDecrement || isPending}
-              className="w-7 h-full flex items-center justify-center text-on-surface text-xs hover:bg-surface-container-low transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed focus:outline-none"
+              disabled={!canDecrement || isPending || isExiting}
+              className="w-7 h-full flex items-center justify-center text-on-surface text-xs hover:bg-surface-container-low active:scale-[0.92] transition-[transform,background-color] duration-120 ease-[cubic-bezier(0.23,1,0.32,1)] disabled:opacity-30 disabled:hover:bg-transparent disabled:active:scale-100 disabled:cursor-not-allowed focus:outline-none motion-reduce:transform-none"
               aria-label={`Decrease quantity of ${item.title}`}
             >
               −
@@ -126,8 +145,8 @@ export function LineItem({ item, onItemClick }: LineItemProps) {
             <button
               type="button"
               onClick={handleIncrement}
-              disabled={!canIncrement || isPending}
-              className="w-7 h-full flex items-center justify-center text-on-surface text-xs hover:bg-surface-container-low transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed focus:outline-none"
+              disabled={!canIncrement || isPending || isExiting}
+              className="w-7 h-full flex items-center justify-center text-on-surface text-xs hover:bg-surface-container-low active:scale-[0.92] transition-[transform,background-color] duration-120 ease-[cubic-bezier(0.23,1,0.32,1)] disabled:opacity-30 disabled:hover:bg-transparent disabled:active:scale-100 disabled:cursor-not-allowed focus:outline-none motion-reduce:transform-none"
               aria-label={`Increase quantity of ${item.title}`}
             >
               +
@@ -145,7 +164,7 @@ export function LineItem({ item, onItemClick }: LineItemProps) {
           <button
             type="button"
             onClick={handleRemove}
-            disabled={isPending}
+            disabled={isPending || isExiting}
             className="text-[11px] text-on-surface-variant hover:text-on-surface uppercase tracking-[0.08em] underline underline-offset-4 decoration-outline hover:decoration-on-surface transition-all focus:outline-none disabled:opacity-50"
           >
             Remove
@@ -153,5 +172,7 @@ export function LineItem({ item, onItemClick }: LineItemProps) {
         </div>
       </div>
     </article>
+      </div>
+    </div>
   );
 }
