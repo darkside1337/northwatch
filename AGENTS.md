@@ -10,6 +10,21 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Northwatch Agent Guidelines
 
+## 0. Task & Tool Transparency & Planning Workflow
+
+When invoking any tool or background task (`run_command`, `view_file`, `replace_file_content`, `invoke_subagent`, etc.):
+- Always format `toolAction` with a concise action followed by a brief purpose in parentheses explaining **why** it is being executed.
+- Format: `<Action> (<reason>)`
+- Examples:
+  - `Running command (verifying clean git working tree)`
+  - `Viewing file (checking auth session validation logic)`
+  - `Editing file (updating cart item quantity)`
+  - `Subagent: research (auditing Stripe webhook idempotency)`
+
+### Plan Mode & Implementation Plans
+- When creating implementation plans in plan mode (`/plan`), always write or mirror the plan markdown file into the project's `plans/` directory (e.g. `plans/<plan-name>.md` or `plans/NNN-<topic>.md`).
+- Because `plans/` is ignored in `.gitignore`, these files remain local reference docs without polluting git tracking or commits.
+
 ## 1. Project & Stack Overview
 
 Northwatch is a boutique ecommerce storefront for minimalist men's watches built with production-grade architecture.
