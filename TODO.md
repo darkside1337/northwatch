@@ -95,15 +95,16 @@ _Note: In Next.js 16 / App Router, `params` and `searchParams` in Server Compone
 
 Needed before checkout can gate anything.
 
-- [ ] `features/auth/schemas.ts`
-- [ ] `features/auth/actions.ts` — Better Auth OAuth dispatch (Google, GitHub — support local test/dev credentials if OAuth keys not configured)
-- [ ] `app/api/auth/[...all]/route.ts` — Better Auth catch-all handler
-- [ ] `lib/auth/session.ts` — session cookie resolution (authoritative, DB-backed)
-- [ ] `app/(account)/login/page.tsx`
-- [ ] Implement `proxy.ts` for real: edge presence check only (does `better-auth.session_token` cookie exist?) → redirect to `/login?redirectTo=...` if missing; **no DB lookup at the edge**
-- [ ] Add authoritative session check in `(account)/layout.tsx` (and later, checkout Server Actions) via `lib/auth/session.ts` — this is the actual security boundary, not `proxy.ts`
-- [ ] Confirm both layers work: edge gate blocks logged-out traffic early, authoritative check is what checkout/order logic trusts
-- [ ] **Phase 4 Exit Check**: Accessing `/account/orders` redirects to `/login`. Logging in sets session and renders protected page.
+- [x] `features/auth/schemas.ts`
+- [x] `features/auth/actions.ts` — Better Auth OAuth dispatch (Google, GitHub — support local test/dev credentials if OAuth keys not configured)
+- [x] `app/api/auth/[...all]/route.ts` — Better Auth catch-all handler
+- [x] `lib/auth/session.ts` — session cookie resolution (authoritative, DB-backed)
+- [x] `app/(account)/login/page.tsx`
+- [x] Implement `proxy.ts` for real: edge presence check only (does `better-auth.session_token` cookie exist?) → redirect to `/login?redirectTo=...` if missing; **no DB lookup at the edge**
+- [x] Add authoritative session check in `(account)/layout.tsx` (and later, checkout Server Actions) via `lib/auth/session.ts` — this is the actual security boundary, not `proxy.ts`
+- [x] Confirm both layers work: edge gate blocks logged-out traffic early, authoritative check is what checkout/order logic trusts
+- [x] **Phase 4 Exit Check**: Accessing `/account/orders` redirects to `/login`. Logging in sets session and renders protected page.
+
 
 ---
 
