@@ -141,7 +141,7 @@ export function CartDrawer() {
         <div className="flex-1 overflow-y-auto px-7 py-6 divide-y divide-outline">
           {items.length === 0 ? (
             /* Empty State */
-            <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center py-12">
+            <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center py-12 animate-in fade-in duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:animate-none">
               <div className="w-16 h-16 mb-4 rounded-full border border-outline flex items-center justify-center text-on-surface-variant/40">
                 <svg
                   className="w-8 h-8"

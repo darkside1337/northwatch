@@ -43,7 +43,7 @@ export function PromoInput() {
   // Case 1: Promo is active and valid
   if (promo && promo.isValid) {
     return (
-      <div className="bg-surface-container-low border border-outline p-3 rounded-none flex items-center justify-between gap-3">
+      <div className="bg-surface-container-low border border-outline p-3 rounded-none flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-1 duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:animate-none">
         <div className="flex items-start gap-2.5 min-w-0">
           <Tag className="w-3.5 h-3.5 text-accent-olive mt-0.5 shrink-0" />
           <div className="min-w-0">
@@ -81,7 +81,7 @@ export function PromoInput() {
 
   // Case 2: Render flat hairline input (with optional inactive promo callout if promo terms no longer met)
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 animate-in fade-in duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:animate-none">
       {promo && !promo.isValid && (
         <div className="bg-surface-container-low border border-outline p-3 rounded-none flex items-center justify-between gap-3 text-xs font-mono">
           <div className="flex items-start gap-2.5 min-w-0">
