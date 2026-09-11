@@ -9,7 +9,11 @@ import {
   processedWebhookEvents,
 } from "@/lib/db/schema";
 import type { FulfillOrderResult, RefundOrderResult } from "./types";
-import { refundOrderInputSchema } from "./schemas";
+import {
+  fulfillOrderInputSchema,
+  refundOrderInputSchema,
+  refundOrderByPaymentIntentInputSchema,
+} from "./schemas";
 
 /**
  * Fulfills an order upon receiving a verified Stripe payment_intent.succeeded webhook.
@@ -25,6 +29,19 @@ export async function fulfillOrder(
   orderId: string,
   stripeEventId?: string
 ): Promise<FulfillOrderResult> {
+  const parseResult = fulfillOrderInputSchema.safeParse({
+    orderId,
+    stripeEventId,
+  });
+
+  if (!parseResult.success) {
+    return {
+      success: false,
+      alreadyProcessed: false,
+      error: parseResult.error.issues[0]?.message ?? "Invalid fulfillment parameters",
+    };
+  }
+
   if (stripeEventId) {
     console.info(`[Fulfillment] Processing order ${orderId} for Stripe event ${stripeEventId}`);
   }
@@ -216,6 +233,20 @@ export async function refundOrderByPaymentIntent(
   stripeRefundId?: string,
   reason?: string
 ): Promise<RefundOrderResult> {
+  const parseResult = refundOrderByPaymentIntentInputSchema.safeParse({
+    paymentIntentId,
+    stripeRefundId,
+    reason,
+  });
+
+  if (!parseResult.success) {
+    return {
+      success: false,
+      alreadyProcessed: false,
+      error: parseResult.error.issues[0]?.message ?? "Invalid refund parameters",
+    };
+  }
+
   const order = await db.query.orders.findFirst({
     where: eq(orders.stripePaymentIntentId, paymentIntentId),
     columns: { id: true },

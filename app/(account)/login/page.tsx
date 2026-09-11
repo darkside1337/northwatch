@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { OAuthSignInCard } from "@/features/auth/components/OAuthSignInCard";
+import { DevSignInButton } from "@/features/auth/components/DevSignInButton";
 import { sanitizeRedirectPath } from "@/features/auth/schemas";
-import { env } from "@/config/env";
 
 export const instant = false;
 
@@ -15,14 +15,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { redirectTo } = await searchParams;
   const safeRedirect = sanitizeRedirectPath(redirectTo, "/account");
 
-
   // If already authenticated, redirect immediately
   const sessionData = await getSession();
   if (sessionData?.session) {
     redirect(safeRedirect);
   }
 
-  const isDev = env.NODE_ENV === "development";
+  const isNonProduction = process.env.NODE_ENV !== "production";
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#141413] flex flex-col justify-between font-sans selection:bg-[#3B4436] selection:text-white">
@@ -49,8 +48,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       </header>
 
       {/* Central Viewport Container */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <OAuthSignInCard redirectTo={safeRedirect} isDev={isDev} />
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <OAuthSignInCard redirectTo={safeRedirect} />
+        {isNonProduction && <DevSignInButton redirectTo={safeRedirect} />}
       </main>
 
       {/* Bottom Global Footnote Bar */}

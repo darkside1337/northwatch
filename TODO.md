@@ -163,16 +163,72 @@ Highest-stakes phase — "this is where bugs cost money." Strict server-side val
 
 - [x] Set up Playwright, resolve the `pnpm test:e2e` TODO in `AGENTS.md`
 - [x] `e2e/checkout.spec.ts` — modular checkout flow suite (unauth redirect, empty bag, drawer flow, shipping inputs, back navigation, decline error, success + DB status verification, empty bag after order). This test must never break; treat as merge-blocking going forward
-- [ ] Audit: no raw DB/Stripe calls under `app/`; no `features/` imports inside `components/ui/`
-- [ ] Audit: every server action / route handler / webhook payload validated with Zod
-- [ ] Audit: all schema changes so far went through Drizzle migrations, none hand-edited
-- [ ] Flag any file over ~200 lines for a possible split
-- [ ] Responsive pass against DESIGN.md breakpoints (desktop 3–4 col, tablet 2 col, mobile 2 col — no single-column catalog stacking; sticky bottom CTAs on mobile checkout/cart)
-- [ ] Resolve open questions from PRD §8: deployment target, tax/shipping calculation provider (self-computed vs third-party)
+- [x] Audit: no raw DB/Stripe calls under `app/`; no `features/` imports inside `components/ui/`
+- [x] Audit: every server action / route handler / webhook payload validated with Zod
+- [x] Audit: all schema changes so far went through Drizzle migrations, none hand-edited
+- [x] Flag any file over ~200 lines for a possible split (split navigation-header, page.tsx, confirmation, AddressForm, CatalogControls)
+- [x] Responsive pass against DESIGN.md breakpoints (desktop 3–4 col, tablet 2 col, mobile 2 col — no single-column catalog stacking; sticky bottom CTAs on mobile checkout/cart)
+- [x] Resolve open questions from PRD §8: deployment target, tax/shipping calculation provider (self-computed vs third-party)
 
 ---
 
-## Phase 9 — Explicitly Out of v1 (Phase 2 candidates)
+## Phase 9 — Brand Experience & Editorial Pages (Archive, Manufacture, Journal)
+
+Implement the missing primary storefront destinations (`/archive`, `/manufacture`, `/journal`), fulfilling the global navigation and grounded in the Google Stitch design specifications (Project `projects/4596131207265013932`).
+
+### Phase 9A — Heritage Series Archive (`/archive`)
+- [x] `features/archive/types.ts` & `features/archive/schemas.ts` — Zod schemas for query/filter state (`dial`, `caseDiameter`, `movement`, `material`, `sort`, `page`)
+- [x] `features/archive/data.ts` — Canonical 12 specimens (NW-01-FLD through NW-12-EDT) matching Stitch reference specifications, movements, case dimensions, dial finishes, and stock status
+- [x] `features/archive/queries.ts` — Pure filtering & sorting logic (`getArchiveSpecimens({ filters, sort })`)
+- [x] `features/archive/components/ArchiveHeader.tsx` — Series Archive monograph intro, active specimen counter, and index label
+- [x] `features/archive/components/ArchiveFilterBar.tsx` — Sticky top-16 faceted filter bar (dial, case, movement, alloy dropdowns, order sort, active query ticker, and clear button)
+- [x] `features/archive/components/ArchiveSpecimenCard.tsx` — Specimen card with 1:1 image, hover scale, reference code, diameter tag, price, and status pip
+- [x] `features/archive/components/ArchiveGrid.tsx` — Mobile-first 1→2→3→4 column architectural grid with hairline borders (`gap-[1px] bg-outline`)
+- [x] `features/archive/components/ArchiveTechBanner.tsx` — Technical divider (DIN-8309 certification norms, tolerance ±0.02mm, alloy specifications)
+- [x] `features/archive/components/ArchivePagination.tsx` — Disciplined minimal pagination & summary strip
+- [x] `features/archive/components/ArchiveView.tsx` — Main domain composition view
+- [x] `app/(shop)/archive/page.tsx` — Thin Server Component route, validates searchParams, renders `ArchiveView`
+- [x] `features/archive/__tests__/archive-queries.test.ts` — Vitest unit tests for filtering, multi-facet combination, and sorting
+
+### Phase 9B — Atelier & Horological Manufacture (`/manufacture`)
+- [x] `features/manufacture/types.ts` & `features/manufacture/data.ts` — Metallurgical specifications (316L steel, double-domed sapphire, Tärnsjö leather), Caliber NW-CAL.01 blueprints (28,800 vph, 26 rubies, 42h reserve, -4/+6s/day), and 4-phase testing protocol metrics
+- [x] `features/manufacture/components/ManufactureHero.tsx` — Stockholm atelier & Geneva laboratory monograph, 16:9/21:9 visual frame, GPS telemetry overlay (`46°12'00"N 06°09'00"E`), and ISO 3159 stamp
+- [x] `features/manufacture/components/MaterialManifestGrid.tsx` — 3-column metallurgical manifest with technical tolerances and grain specifications
+- [x] `features/manufacture/components/CaliberArchitectureSplit.tsx` — 50/50 editorial split: regulation essay with Geneva seal mark + technical parameter table
+- [x] `features/manufacture/components/TestingProtocolRail.tsx` — 4-phase horizontal testing protocol rail (Thermal shock, Hydrostatic 12.5 bar, Demagnetization DIN 8309, Micro-acoustic timing)
+- [x] `features/manufacture/components/ManufactureCtaBanner.tsx` — Restrained edition manifest banner linking to `/products`
+- [x] `features/manufacture/components/ManufactureView.tsx` — Main domain composition view
+- [x] `app/(shop)/manufacture/page.tsx` — Thin Server Component route, renders `ManufactureView`
+- [x] `features/manufacture/__tests__/manufacture-data.test.ts` — Vitest tests verifying structural integrity and completeness of manufacturing data
+
+### Phase 9C — The Northwatch Journal & Monograph Library (`/journal`)
+- [x] `features/journal/types.ts` & `features/journal/schemas.ts` — Zod schemas for category tabs and newsletter inscription
+- [x] `features/journal/data.ts` — Curated articles (Lead Dispatch 014: *Aesthetics of Restraint*; Dispatches 013, 012, 011), full essay bodies for reader view, and indexed field notes (Notes 08–05 with SHA-256 checksums)
+- [x] `features/journal/queries.ts` — Article queries by category (`getJournalArticles`) and slug (`getArticleBySlug`)
+- [x] `features/journal/components/JournalMasthead.tsx` — Vol. IV header, geographic coordinates, and category filter rail
+- [x] `features/journal/components/JournalLeadFeature.tsx` — 60/40 lead monograph layout with macro visual, metadata stamp, and essay link
+- [x] `features/journal/components/JournalArticleCard.tsx` — Article card with category tag, reading time, author, and dispatch link
+- [x] `features/journal/components/JournalArticleGrid.tsx` — 3-column modular article grid mapping over dispatches
+- [x] `features/journal/components/JournalMonographLibrary.tsx` — Indexed field notes table with reference codes and spec download/view triggers
+- [x] `features/journal/components/JournalDispatchSubscribe.tsx` — Client component: "Keep Good Time" inscription form with instant inline confirmation
+- [x] `features/journal/components/JournalTelemetryBar.tsx` — 4-column metric strip (monographs, caliber specs, chronometric ratio, primary alloy)
+- [x] `features/journal/components/JournalArticleView.tsx` — Long-form editorial reader (dropcap, blockquote, author bio, backlink)
+- [x] `features/journal/components/JournalView.tsx` — Main domain composition view
+- [x] `app/(shop)/journal/page.tsx` — Thin Server Component route, parses category searchParams, renders `JournalView`
+- [x] `app/(shop)/journal/[slug]/page.tsx` — Full-length essay reader route with `notFound()` boundary
+- [x] `app/(shop)/journal/[slug]/not-found.tsx` — Branded 404 for unknown article slugs
+- [x] `features/journal/__tests__/journal-queries.test.ts` — Vitest unit tests for category filtering and slug lookup
+
+### Phase 9D — Verification, Responsive Polish & E2E Testing
+- [x] Mobile-first responsive audit (<640px mobile, 640–1024px tablet, >1024px desktop) across all 3 pages
+- [x] Verify global navigation and active state highlighting in `components/navigation-header.tsx`, `components/navigation-mobile-menu.tsx`, and `components/footer.tsx`
+- [x] `e2e/brand-pages.spec.ts` — Playwright test suite verifying `/archive` filters, `/manufacture` technical tables, `/journal` categories, `/journal/[slug]` reader, and newsletter inscription
+- [x] Clean Next.js 16 production build verification (`pnpm build` completed with 24/24 pages statically generated)
+- [x] Full project verification executed and passing: `pnpm lint`, `pnpm test` (157/157 passed), and Playwright E2E suites (14/14 passed)
+
+---
+
+## Phase 10 — Explicitly Out of v1 (Phase 2 candidates)
 
 Don't build these yet — noted here so they're not accidentally scope-crept into v1.
 

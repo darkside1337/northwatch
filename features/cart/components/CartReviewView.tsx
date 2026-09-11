@@ -129,7 +129,7 @@ export function CartReviewView() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-28 lg:pb-12">
       {/* 1. Breadcrumb / Back Link */}
       <nav className="mb-6">
         <Link
@@ -348,6 +348,25 @@ export function CartReviewView() {
             </div>
           </div>
         </aside>
+      </div>
+
+      {/* Mobile Sticky Checkout Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-surface/95 backdrop-blur-sm border-t border-outline lg:hidden z-30 flex items-center justify-between gap-4">
+        <div>
+          <span className="block text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+            Estimated Total
+          </span>
+          <span className="font-mono text-base font-medium text-on-surface tabular-nums">
+            {formatPrice(totals.totalCents)}
+          </span>
+        </div>
+        <Link
+          href="/checkout"
+          className="flex-1 max-w-[240px] py-3.5 bg-on-surface text-white text-xs uppercase tracking-[0.14em] font-medium hover:bg-[#2A2A28] active:scale-[0.99] transition-all flex items-center justify-center gap-2 select-none shadow-sm"
+        >
+          <span>{isPending ? "Updating..." : "Proceed to Checkout"}</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
     </div>
   );

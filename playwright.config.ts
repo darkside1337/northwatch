@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.BASE_URL || "http://localhost:3333";
+const port = process.env.PORT || "3333";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -8,7 +11,7 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://localhost:3333",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -17,10 +20,14 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    command: "pnpm exec next dev -p 3333",
-    url: "http://localhost:3333",
-    reuseExistingServer: true,
-    timeout: 120000,
-  },
+  ...(process.env.NO_WEBSERVER
+    ? {}
+    : {
+        webServer: {
+          command: `stripe listen --forward-to localhost:${port}/api/webhooks/stripe & pnpm exec next dev -p ${port}`,
+          url: baseURL,
+          reuseExistingServer: true,
+          timeout: 120000,
+        },
+      }),
 });

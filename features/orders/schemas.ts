@@ -63,6 +63,11 @@ export const orderSchema = z.object({
  * Fulfillment & Refund Mutation Schemas
  * -----------------------------------------------------------------------------
  */
+export const fulfillOrderInputSchema = z.object({
+  orderId: z.string().uuid("Invalid order ID"),
+  stripeEventId: z.string().min(1).optional(),
+});
+
 export const fulfillOrderResultSchema = z.object({
   success: z.boolean(),
   alreadyProcessed: z.boolean(),
@@ -75,9 +80,63 @@ export const refundOrderInputSchema = z.object({
   stripeRefundId: z.string().optional(),
 });
 
+export const refundOrderByPaymentIntentInputSchema = z.object({
+  paymentIntentId: z.string().min(1, "Payment intent ID is required"),
+  stripeRefundId: z.string().optional(),
+  reason: z.string().max(256).optional(),
+});
+
 export const refundOrderResultSchema = z.object({
   success: z.boolean(),
   alreadyProcessed: z.boolean(),
   restockedItemsCount: z.number().int().nonnegative().optional(),
   error: z.string().optional(),
 });
+
+/**
+ * -----------------------------------------------------------------------------
+ * Stripe Webhook Payload Schemas (Narrow & Forward-Compatible)
+ * -----------------------------------------------------------------------------
+ * Validates ONLY the fields inspected by Northwatch webhook handlers.
+ * Employs .passthrough() so future Stripe API field additions do not reject events.
+ */
+export const stripePaymentIntentWebhookSchema = z
+  .object({
+    id: z.string().min(1),
+    metadata: z
+      .object({
+        orderId: z.string().uuid("Invalid orderId in metadata"),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+export const stripeChargeRefundedWebhookSchema = z
+  .object({
+    id: z.string().min(1),
+    payment_intent: z
+      .union([
+        z.string().min(1),
+        z.object({ id: z.string().min(1) }).passthrough(),
+      ])
+      .optional()
+      .nullable(),
+    refunds: z
+      .object({
+        data: z
+          .array(
+            z
+              .object({
+                id: z.string().optional(),
+                reason: z.string().nullable().optional(),
+              })
+              .passthrough()
+          )
+          .optional(),
+      })
+      .passthrough()
+      .optional()
+      .nullable(),
+  })
+  .passthrough();
+

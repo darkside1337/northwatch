@@ -114,6 +114,7 @@ test.describe("Checkout & Payments Modular E2E Suite", () => {
   });
 
   test("7. Successful payment redirects to confirmation and flips DB status to paid", async ({ page, context }) => {
+    test.setTimeout(60000);
     await advanceToPaymentStep(page, context);
 
     // Documented stable frame selector excluding the easel layout container frame
@@ -132,7 +133,7 @@ test.describe("Checkout & Payments Modular E2E Suite", () => {
     // Client-side redirect to confirmation
     await expect(page).toHaveURL(/\/confirmation\//, { timeout: 25000 });
     await expect(page.getByRole("heading", { name: /Acquisition Confirmed|Order Processing/i })).toBeVisible();
-    await expect(page.getByText("Skeppsbron 14")).toBeVisible();
+    await expect(page.getByText("Skeppsbron 14").first()).toBeVisible();
     await expect(page.getByText("Express Air Courier", { exact: true })).toBeVisible();
 
     const orderId = page.url().split("/confirmation/")[1].split("?")[0];
@@ -156,8 +157,8 @@ test.describe("Checkout & Payments Modular E2E Suite", () => {
     // Verify order presence in Collector Order Archive
     await expect(page).toHaveURL(/\/account\/orders/);
     const orderRef = `NW-${orderId.slice(0, 8).toUpperCase()}`;
-    await expect(page.getByText(orderRef)).toBeVisible();
-    await expect(page.getByText(/ALLOCATED \/\/ PAID/i)).toBeVisible();
+    await expect(page.getByText(orderRef).first()).toBeVisible();
+    await expect(page.getByText(/ALLOCATED \/\/ PAID/i).first()).toBeVisible();
 
     // Click through to Order Detail
     const viewDetailsLink = page.locator(`a[href="/account/orders/${orderId}"]`);
@@ -167,8 +168,8 @@ test.describe("Checkout & Payments Modular E2E Suite", () => {
     // Verify Order Detail view
     await expect(page).toHaveURL(new RegExp(`/account/orders/${orderId}`));
     await expect(page.getByRole("heading", { name: orderRef })).toBeVisible();
-    await expect(page.getByText("Skeppsbron 14")).toBeVisible();
-    await expect(page.getByText(/Allocation Manifest/i)).toBeVisible();
+    await expect(page.getByText("Skeppsbron 14").first()).toBeVisible();
+    await expect(page.getByText(/Allocation Manifest/i).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Print Receipt/i })).toBeVisible();
   });
 

@@ -3,6 +3,10 @@ import type { NextRequest } from "next/server";
 import { stripe } from "@/lib/payments/stripe";
 import { env } from "@/config/env";
 import { fulfillOrder, refundOrderByPaymentIntent } from "@/features/orders/actions";
+import {
+  stripePaymentIntentWebhookSchema,
+  stripeChargeRefundedWebhookSchema,
+} from "@/features/orders/schemas";
 import type Stripe from "stripe";
 
 export async function POST(req: NextRequest) {
@@ -26,13 +30,22 @@ export async function POST(req: NextRequest) {
 
   // Golden Invariant: Delegate immediately to domain features; no inline fulfillment logic
   if (event.type === "payment_intent.succeeded") {
-    const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    const orderId = paymentIntent.metadata?.orderId;
-    if (orderId) {
-      await fulfillOrder(orderId, event.id);
+    const parseResult = stripePaymentIntentWebhookSchema.safeParse(event.data.object);
+    if (!parseResult.success) {
+      console.warn("⚠️ Ignored payment_intent.succeeded webhook with missing/invalid orderId:", parseResult.error.flatten());
+      return NextResponse.json({ received: true, ignored: true });
     }
+
+    const { metadata } = parseResult.data;
+    await fulfillOrder(metadata.orderId, event.id);
   } else if (event.type === "charge.refunded") {
-    const charge = event.data.object as Stripe.Charge;
+    const parseResult = stripeChargeRefundedWebhookSchema.safeParse(event.data.object);
+    if (!parseResult.success) {
+      console.warn("⚠️ Ignored charge.refunded webhook with unparseable payload:", parseResult.error.flatten());
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
+    const charge = parseResult.data;
     const paymentIntentId =
       typeof charge.payment_intent === "string"
         ? charge.payment_intent

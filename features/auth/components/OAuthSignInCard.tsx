@@ -1,19 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { authClient } from "@/lib/auth/auth-client";
-import { devSignInAction } from "../actions";
 import { sanitizeRedirectPath } from "../schemas";
 
 interface OAuthSignInCardProps {
   redirectTo?: string;
-  isDev?: boolean;
 }
 
-export function OAuthSignInCard({ redirectTo, isDev = false }: OAuthSignInCardProps) {
+export function OAuthSignInCard({ redirectTo }: OAuthSignInCardProps) {
   const [loadingProvider, setLoadingProvider] = useState<"google" | "github" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPendingDev, startDevTransition] = useTransition();
 
   const safeRedirect = sanitizeRedirectPath(redirectTo, "/account");
 
@@ -29,20 +26,6 @@ export function OAuthSignInCard({ redirectTo, isDev = false }: OAuthSignInCardPr
       setErrorMessage(err instanceof Error ? err.message : "Failed to initiate sign in. Please try again.");
       setLoadingProvider(null);
     }
-  }
-
-  function handleDevSignIn() {
-    setErrorMessage(null);
-    startDevTransition(async () => {
-      try {
-        const res = await devSignInAction(safeRedirect);
-        if (res?.destination) {
-          window.location.href = res.destination;
-        }
-      } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : "Dev sign-in failed.");
-      }
-    });
   }
 
   return (
@@ -103,7 +86,7 @@ export function OAuthSignInCard({ redirectTo, isDev = false }: OAuthSignInCardPr
         <button
           type="button"
           onClick={() => handleOAuthSignIn("google")}
-          disabled={loadingProvider !== null || isPendingDev}
+          disabled={loadingProvider !== null}
           className="group w-full h-[48px] px-4 bg-[#FFFFFF] border border-[#141413] text-[#141413] hover:bg-[#F4F3F0] transition-colors duration-150 flex items-center justify-between text-left rounded-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <div className="flex items-center gap-3">
@@ -138,7 +121,7 @@ export function OAuthSignInCard({ redirectTo, isDev = false }: OAuthSignInCardPr
         <button
           type="button"
           onClick={() => handleOAuthSignIn("github")}
-          disabled={loadingProvider !== null || isPendingDev}
+          disabled={loadingProvider !== null}
           className="group w-full h-[48px] px-4 bg-[#141413] border border-[#141413] text-[#FFFFFF] hover:bg-[#2A2A28] transition-colors duration-150 flex items-center justify-between text-left rounded-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <div className="flex items-center gap-3">
@@ -158,21 +141,6 @@ export function OAuthSignInCard({ redirectTo, isDev = false }: OAuthSignInCardPr
           </span>
         </button>
       </div>
-
-      {/* 5. Dev / Local Test Mode Button */}
-      {isDev && (
-        <div className="mb-7">
-          <button
-            type="button"
-            onClick={handleDevSignIn}
-            disabled={isPendingDev || loadingProvider !== null}
-            className="w-full py-2 px-3 bg-transparent border border-dashed border-[#DCD8D0] hover:border-[#141413] text-[#595854] hover:text-[#141413] text-[10px] font-mono uppercase tracking-[0.12em] transition-colors flex items-center justify-center gap-2 rounded-none cursor-pointer disabled:opacity-50"
-          >
-            <span className="w-1.5 h-1.5 rounded-none bg-[#3B4436]" />
-            <span>{isPendingDev ? "AUTHENTICATING TEST COLLECTOR..." : "QUICK DEV SIGN-IN (TEST COLLECTOR)"}</span>
-          </button>
-        </div>
-      )}
 
       {/* 6. Footer & Security Readout */}
       <div className="pt-5 border-t border-[#E8E5DF] text-center">

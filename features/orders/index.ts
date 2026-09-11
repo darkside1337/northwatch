@@ -7,4 +7,5 @@ export * from "./components/OrderCard";
 export * from "./components/OrderArchiveList";
 export * from "./components/OrderTimeline";
 export * from "./components/OrderDetailView";
+export * from "./components/OrderConfirmationView";
 export * from "./components/PrintReceiptButton";

@@ -11,6 +11,6 @@ export const testAuth = betterAuth({
     schema,
   }),
   secret: env.BETTER_AUTH_SECRET,
-  baseURL: "http://localhost:3333",
+  baseURL: env.BETTER_AUTH_URL || "http://localhost:3000",
   plugins: [testUtils()],
 });

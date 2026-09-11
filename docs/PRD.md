@@ -161,7 +161,7 @@ Homepage → Browse Watches → Product Page → Choose Variant → Add to Cart
 | Auth          | Better Auth (OAuth: Google, GitHub)           |
 | UI primitives | shadcn/ui                                     |
 | Validation    | Zod                                           |
-| Deployment    | TBD                                           |
+| Deployment    | Vercel Serverless (Node.js/Edge) + Docker Standalone |
 
 ## 6. Visual Direction
 
@@ -184,7 +184,7 @@ The storefront should read as a **premium watch boutique / editorial site**, not
 
 **Explicitly avoid**: purple/blue gradients, neon colors, glassmorphism, "AI SaaS" aesthetics.
 
-> For complete design tokens, typography scales, spacing rules, and component interaction states, refer to [docs/DESIGN.md](file:///home/darkside/projects/northwatch/docs/DESIGN.md).
+> For complete design tokens, typography scales, spacing rules, and component interaction states, refer to [docs/DESIGN.md](file://wsl.localhost/Ubuntu/home/darkside/projects/northwatch/docs/DESIGN.md).
 
 ## 7. Non-Negotiable Rules for Agentic Development
 
@@ -201,7 +201,23 @@ The storefront should read as a **premium watch boutique / editorial site**, not
 
 - Keep files small and scoped to one responsibility — flag any file that grows past ~200 lines for a possible split.
 
-## 8. Open Questions
+## 8. Deployment & Production Architecture Decisions (Resolved in Phase 8)
 
-- Deployment target not yet decided.
-- Tax/shipping calculation provider (self-computed vs third-party API) not yet decided.
+### 8.1 Deployment Target
+- **Primary**: Vercel Serverless with Next.js 16 App Router. Edge proxy (`proxy.ts`) for presence-based route protection; warm-cached pooled database clients in Node.js serverless functions.
+- **Portability**: Standard `output: "standalone"` compatible for containerized deployment via Docker / Google Cloud Run.
+
+### 8.2 Tax & Shipping Calculation
+- **Version 1**: Deterministic server-authoritative calculations governed by [`config/site.ts`](file://wsl.localhost/Ubuntu/home/darkside/projects/northwatch/config/site.ts).
+  - Shipping: Armored ground courier ($15.00, complimentary over $500.00), Express air courier ($35.00), and Priority vault courier ($75.00).
+  - Tax: Destination-based state rates for sample collector jurisdictions (CA: 7.25%, NY: 8.875%, TX: 6.25%, FL: 6.00%; default 0.0%).
+- **Phase 2**: Automated nexus tracking and dynamic cross-border VAT calculation via Stripe Tax / TaxJar API integration.
+
+### 8.3 Secrets, Credentials & Production Hardening
+- **Stripe Restricted API Keys (RAK)**: Production environments must use restricted API keys (`rk_live_...` or `rk_test_...`) adhering strictly to the principle of least privilege:
+  - `PaymentIntents`: Read & Write
+  - `Refunds`: Read & Write
+  - `Charges`: Read
+  - `Webhook Endpoints`: Read
+- **Authentication Bypass Isolation**: Development bypass actions (`devSignInAction`) and testing UI components (`DevSignInButton`) are strictly segregated from production code and guarded by an explicit runtime error throw if invoked when `process.env.NODE_ENV === "production"`.
+- **Database Connection Pooling**: Neon serverless pooling endpoint (`-pooler.region.neon.tech`) configured with pool caching across warm Lambdas and concurrency bounds (`max: 3` connections per container) to protect Postgres connection ceilings.

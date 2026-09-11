@@ -70,7 +70,7 @@ northwatch/
 └── e2e/
 └── checkout.spec.ts # [TODO] End-to-end checkout flow test — critical path, see Invariant 9
 
-> **`lib/db/client.ts` driver note**: Neon's default HTTP driver (`neon()` from `@neondatabase/serverless`) is stateless and does not support interactive transactions (`db.transaction(async (tx) => ...)`). Order creation (order + order_items) and order fulfillment (status transition + stock decrement) are both multi-step atomic operations, so `client.ts` must instantiate Drizzle over either Neon's WebSocket pooler (`Pool` from `@neondatabase/serverless`) or `pg.Pool` connected via Neon's pooled connection string — not the plain HTTP client. `package.json` already includes both `@neondatabase/serverless` and `pg`; the pooled client is the one used for all order/checkout writes.
+> **`lib/db/client.ts` serverless connection pooling**: Neon Postgres uses an external PgBouncer connection pooler (`-pooler.region.neon.tech`). To prevent connection exhaustion across warm serverless functions (e.g. Vercel Lambdas), `lib/db/client.ts` caches the `pg.Pool` instance on `globalThis` (`globalForDb.pool`) and bounds concurrency with `max: 3` connections in production (`max: 10` in development). Interactive transactions (`db.transaction`) and session-level locks (`pg_advisory_xact_lock`) execute reliably in transaction-mode pooling because locks auto-release on transaction commit or rollback.
 
 ---
 
@@ -121,32 +121,48 @@ Request to /account/_ or /checkout/_
 
 > **Why two checks**: `proxy.ts` runs at the edge on every matched request, so it stays cheap — a cookie-presence check, not a database session lookup, to avoid adding DB round-trip latency (and load) to every `/account` and `/checkout` request. It is a routing-level gate, not the security boundary. The authoritative check — full cryptographic/database session resolution via `lib/auth/session.ts` — happens in the account layout and in each checkout Server Action, which is where it actually matters for correctness. `proxy.ts` keeps out unauthenticated traffic early; the server-side check is what checkout and order logic actually trust.
 
-### Order Placement & Webhook Processing
+### Order Placement & Webhook Processing (Decoupled Transaction Model)
 
 User submits Shipping & Payment
-├─► features/checkout/actions.ts: createPaymentIntent()
+├─► features/checkout/actions.ts: createOrUpdateDraftOrderAction()
 │ ├─► Validates items via features/checkout/schemas.ts (Zod)
-│ ├─► Computes exact prices and taxes server-side using lib/db
-│ ├─► Single atomic transaction (pooled Drizzle client):
-│ │ ├─► Inserts an `orders` row in `pending_payment` status
-│ │ └─► Inserts the corresponding `order_items` rows (product, variant, qty, unit price at time of order)
-│ ├─► Writes the resulting `orderId` into the Stripe PaymentIntent metadata
-│ └─► Creates Stripe PaymentIntent and returns client_secret to app/(shop)/checkout/payment/page.tsx
+│ ├─► Transaction 1 (DB, Atomic):
+│ │ ├─► Acquires advisory lock: pg_advisory_xact_lock(hashtext('draft_order_' || userId))
+│ │ ├─► Checks for existing draft order in `pending_payment` status
+│ │ ├─► Validates live prices, discounts, and inventory against catalog
+│ │ ├─► Computes server-authoritative totals (subtotal, shipping, tax, discounts)
+│ │ ├─► Upserts `orders` row in `pending_payment` status & line items
+│ │ └─► Commits transaction and releases DB connection back to the serverless pool
+│ ├─► Unlocked External Stripe API Call:
+│ │ ├─► Invokes `stripe.paymentIntents.create` (or `.update`) outside DB transaction
+│ │ ├─► Deterministic idempotency key: `create_pi_${draftInfo.orderId}` (prevents double-click races)
+│ │ ├─► Uses committed `draftInfo.totalCents` to eliminate Stripe payload mismatch errors
+│ │ └─► Passes `orderId` in Stripe PaymentIntent metadata
+│ ├─► Transaction 2 (DB, Atomic):
+│ │ ├─► Persists returned `stripePaymentIntentId` to the draft order row
+│ │ └─► Returns `clientSecret` to client checkout wizard
 │
 User is redirected to confirmation/[orderId]/page.tsx
-└─► Page reads the order + order_items by orderId (both already exist) and renders the summary; while status is `pending_payment` it shows an "awaiting confirmation" state (polls or subscribes) rather than assuming payment is complete
+└─► Page reads the order + order_items by orderId (both already exist) and renders OrderConfirmationView; while status is `pending_payment` OrderSettlementPoller polls the server until finalized
 │
 Stripe fires payment_intent.succeeded (at-least-once delivery — may be retried)
-└─► app/api/webhooks/stripe/route.ts (verifies signature only)
-└─► features/orders/actions.ts: fulfillOrder(orderId, stripeEventId)
-├─► Conditional update: `UPDATE orders SET status = 'paid' WHERE id = :orderId AND status = 'pending_payment'`
-├─► Only if the update affected exactly 1 row: decrement stock for each existing order_items row, inside the same transaction
-└─► If 0 rows affected (already paid, or event replayed): no-op and return success — idempotent by construction
+├─► app/api/webhooks/stripe/route.ts
+│ ├─► Verifies Stripe cryptographic webhook signature (`stripe.webhooks.constructEvent`)
+│ ├─► Validates payload using narrow, forward-compatible Zod schemas (`.passthrough()`)
+│ └─► Delegates to `fulfillOrder(orderId, stripeEventId)` (no inline business logic)
+├─► features/orders/actions.ts: fulfillOrder(orderId, stripeEventId)
+│ ├─► Validates inputs via `fulfillOrderInputSchema`
+│ ├─► Transaction (DB, Atomic):
+│ │ ├─► Checks `processed_webhook_events` table for idempotency
+│ │ ├─► Conditional update: `UPDATE orders SET status = 'paid' WHERE id = :orderId AND status = 'pending_payment'`
+│ │ ├─► Decrements product variant stock inside the same transaction
+│ │ └─► Records `stripeEventId` in `processed_webhook_events`
+│ └─► If already processed: short-circuits gracefully with success
 
-> **Why line items are written at creation, not in the webhook**: `fulfillOrder(orderId)` needs the line items to decrement stock and render the confirmation summary. Reconstructing them from Stripe PaymentIntent metadata isn't viable — metadata is capped at 50 keys / 500 characters per value, which a multi-item cart can easily exceed — and re-reading the live cart is unsafe, since the cart may have been modified or cleared in another tab by the time the webhook fires. Writing `orders` + `order_items` atomically inside `createPaymentIntent()` means the confirmation page always has a complete, stable order record to show, independent of webhook timing, and `fulfillOrder()` only ever needs to flip status and adjust stock.
+> **Why external API calls are decoupled from DB transactions**: Holding database connections open across third-party network calls (like Stripe API requests) ties up connections during latency spikes, quickly exhausting small serverless connection pools (`max: 3`). Splitting the checkout flow into Transaction 1 (DB order creation) -> Stripe API call -> Transaction 2 (DB payment intent link) preserves connection pool headroom while the deterministic Stripe idempotency key (`create_pi_${orderId}`) prevents duplicate charges if concurrent requests race during the unlocked interval.
+
+> **Why line items are written at creation, not in the webhook**: `fulfillOrder(orderId)` needs the line items to decrement stock and render the confirmation summary. Reconstructing them from Stripe PaymentIntent metadata isn't viable — metadata is capped at 50 keys / 500 characters per value, which a multi-item cart can easily exceed — and re-reading the live cart is unsafe, since the cart may have been modified or cleared in another tab by the time the webhook fires. Writing `orders` + `order_items` atomically inside `createOrUpdateDraftOrderAction()` means the confirmation page always has a complete, stable order record to show, independent of webhook timing, and `fulfillOrder()` only ever needs to flip status and adjust stock.
 
 > **Why pre-create the order**: Creating the order (in `pending_payment` state) at PaymentIntent-creation time — rather than inside the webhook handler — closes the race condition where a user reaches the confirmation page before the webhook has been delivered. The confirmation page always has a real `orderId` to look up; it just may briefly show a pending state until `payment_intent.succeeded` arrives and `fulfillOrder()` flips it to `paid`.
 
-> **Webhook idempotency**: Stripe guarantees at-least-once webhook delivery, so `fulfillOrder()` must be safe to run more than once for the same event. The conditional `WHERE status = 'pending_payment'` update makes the status transition idempotent directly — a retried event finds 0 matching rows and decrements nothing. Alternatively (or additionally, for stronger guarantees), log processed Stripe event IDs to a `processed_webhook_events` table inside the same transaction and short-circuit if the event ID has already been seen.
-
-> **Webhook event**: This flow uses the embedded Stripe Elements PaymentIntent flow (`client_secret` + `stripe.confirmPayment()`), not hosted Stripe Checkout. The corresponding webhook event is therefore `payment_intent.succeeded`, not `checkout.session.completed` (which only fires for Stripe Checkout Sessions).
+> **Webhook idempotency**: Stripe guarantees at-least-once webhook delivery, so `fulfillOrder()` must be safe to run more than once for the same event. The combination of event ID deduplication in `processed_webhook_events` and conditional status transitions (`WHERE status = 'pending_payment'`) guarantees zero duplicate fulfillments or inventory double-decrements on replay.

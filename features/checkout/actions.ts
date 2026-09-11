@@ -105,14 +105,12 @@ export async function createOrUpdatePaymentIntent(
     promoCode: thinCart.promoCode,
   });
 
-  const idempotencyKey = `checkout_${user.id}_${input.clientAttemptToken}`;
-
-  // 3. Serialized Database Transaction
-  const draftResult = await db.transaction(async (tx) => {
-    // Step 1: Acquire advisory lock on the user ID FIRST before reading
+  // 3. Decoupled Transaction Flow
+  // Step 1: Fast serialized database transaction (<5ms)
+  // Acquires advisory lock, creates or updates draft order and items, and returns connection to pool.
+  const draftInfo = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${user.id}))`);
 
-    // Step 2: Read active pending draft (< 24h old)
     const [existingDraft] = await tx
       .select()
       .from(orders)
@@ -125,43 +123,7 @@ export async function createOrUpdatePaymentIntent(
       )
       .limit(1);
 
-    if (existingDraft && existingDraft.stripePaymentIntentId) {
-      let clientSecret: string;
-      try {
-        const updatedIntent = await stripe.paymentIntents.update(
-          existingDraft.stripePaymentIntentId,
-          {
-            amount: totalCents,
-            metadata: {
-              orderId: existingDraft.id,
-              userId: user.id,
-            },
-          },
-          { idempotencyKey }
-        );
-        clientSecret = updatedIntent.client_secret!;
-      } catch (stripeErr) {
-        console.warn("Could not update existing PaymentIntent; creating replacement:", stripeErr);
-        const newIntent = await stripe.paymentIntents.create(
-          {
-            amount: totalCents,
-            currency: "usd",
-            automatic_payment_methods: { enabled: true },
-            metadata: {
-              orderId: existingDraft.id,
-              userId: user.id,
-            },
-          },
-          { idempotencyKey: `${idempotencyKey}_fallback` }
-        );
-        clientSecret = newIntent.client_secret!;
-        await tx
-          .update(orders)
-          .set({ stripePaymentIntentId: newIntent.id })
-          .where(eq(orders.id, existingDraft.id));
-      }
-
-      // Update existing draft row
+    if (existingDraft) {
       await tx
         .update(orders)
         .set({
@@ -178,7 +140,6 @@ export async function createOrUpdatePaymentIntent(
         })
         .where(eq(orders.id, existingDraft.id));
 
-      // Overwrite order items snapshot
       await tx.delete(orderItems).where(eq(orderItems.orderId, existingDraft.id));
       await tx.insert(orderItems).values(
         lineItemsToSnapshot.map((item) => ({
@@ -189,31 +150,12 @@ export async function createOrUpdatePaymentIntent(
 
       return {
         orderId: existingDraft.id,
-        shippingAddress: input.shippingAddress,
-        shippingTierId: input.shippingTierId,
-        clientSecret,
-        subtotalCents,
-        discountCents,
-        promoCode: thinCart.promoCode ?? null,
-        shippingCents,
-        taxCents,
+        stripePaymentIntentId: existingDraft.stripePaymentIntentId,
         totalCents,
+        isNew: false,
       };
     } else {
-      // Step 3: Insert path (Cold start)
       const newOrderId = crypto.randomUUID();
-      const paymentIntent = await stripe.paymentIntents.create(
-        {
-          amount: totalCents,
-          currency: "usd",
-          automatic_payment_methods: { enabled: true },
-          metadata: {
-            orderId: newOrderId,
-            userId: user.id,
-          },
-        },
-        { idempotencyKey }
-      );
 
       await tx.insert(orders).values({
         id: newOrderId,
@@ -228,7 +170,7 @@ export async function createOrUpdatePaymentIntent(
         totalCents,
         shippingTierId: input.shippingTierId,
         shippingAddress: input.shippingAddress,
-        stripePaymentIntentId: paymentIntent.id,
+        stripePaymentIntentId: null,
       });
 
       await tx.insert(orderItems).values(
@@ -240,19 +182,86 @@ export async function createOrUpdatePaymentIntent(
 
       return {
         orderId: newOrderId,
-        shippingAddress: input.shippingAddress,
-        shippingTierId: input.shippingTierId,
-        clientSecret: paymentIntent.client_secret!,
-        subtotalCents,
-        discountCents,
-        promoCode: thinCart.promoCode ?? null,
-        shippingCents,
-        taxCents,
+        stripePaymentIntentId: null,
         totalCents,
+        isNew: true,
       };
     }
   });
 
-  return draftResult;
+  // Step 2: Stripe API call outside any database transaction (100-300ms)
+  // No DB connections held during network call.
+  // Deterministic idempotency key derived from orderId prevents double-click duplicate intents.
+  // Amount is strictly taken from committed row (draftInfo.totalCents) to avoid payload mismatch errors.
+  let paymentIntent;
+  let needsPaymentIntentIdPersistence = draftInfo.isNew;
+
+  if (draftInfo.stripePaymentIntentId) {
+    const updateKey = `update_pi_${draftInfo.orderId}_${draftInfo.totalCents}`;
+    try {
+      paymentIntent = await stripe.paymentIntents.update(
+        draftInfo.stripePaymentIntentId,
+        {
+          amount: draftInfo.totalCents,
+          metadata: {
+            orderId: draftInfo.orderId,
+            userId: user.id,
+          },
+        },
+        { idempotencyKey: updateKey }
+      );
+    } catch (stripeErr) {
+      console.warn("Could not update existing PaymentIntent; creating replacement:", stripeErr);
+      const fallbackKey = `create_pi_${draftInfo.orderId}_fallback`;
+      paymentIntent = await stripe.paymentIntents.create(
+        {
+          amount: draftInfo.totalCents,
+          currency: "usd",
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            orderId: draftInfo.orderId,
+            userId: user.id,
+          },
+        },
+        { idempotencyKey: fallbackKey }
+      );
+      needsPaymentIntentIdPersistence = true;
+    }
+  } else {
+    const createKey = `create_pi_${draftInfo.orderId}`;
+    paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount: draftInfo.totalCents,
+        currency: "usd",
+        automatic_payment_methods: { enabled: true },
+        metadata: {
+          orderId: draftInfo.orderId,
+          userId: user.id,
+        },
+      },
+      { idempotencyKey: createKey }
+    );
+  }
+
+  // Step 3: Fast database write to persist new Stripe PaymentIntent ID (<2ms)
+  if (needsPaymentIntentIdPersistence && paymentIntent.id) {
+    await db
+      .update(orders)
+      .set({ stripePaymentIntentId: paymentIntent.id, updatedAt: new Date() })
+      .where(eq(orders.id, draftInfo.orderId));
+  }
+
+  return {
+    orderId: draftInfo.orderId,
+    shippingAddress: input.shippingAddress,
+    shippingTierId: input.shippingTierId,
+    clientSecret: paymentIntent.client_secret!,
+    subtotalCents,
+    discountCents,
+    promoCode: thinCart.promoCode ?? null,
+    shippingCents,
+    taxCents,
+    totalCents,
+  };
 }
 

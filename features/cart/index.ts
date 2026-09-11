@@ -6,6 +6,7 @@ export { CartDrawer } from "./components/CartDrawer";
 export { CartReviewView } from "./components/CartReviewView";
 export { LineItem } from "./components/LineItem";
 export { PromoInput } from "./components/PromoInput";
+export { CartNavHeader } from "./components/CartNavHeader";
 
 // Server Actions (Client-safe RPC stubs in Next.js App Router)
 export {
