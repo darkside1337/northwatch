@@ -14,6 +14,7 @@
 /coverage
 /playwright-report/
 /test-results/
+/demo-recordings/
 
 # next.js
 /.next/
@@ -42,8 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-/IGNORETHISFOLDER
 
 # task plans / agent scratchpads
 plans/

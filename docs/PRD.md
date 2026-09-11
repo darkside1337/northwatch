@@ -184,7 +184,7 @@ The storefront should read as a **premium watch boutique / editorial site**, not
 
 **Explicitly avoid**: purple/blue gradients, neon colors, glassmorphism, "AI SaaS" aesthetics.
 
-> For complete design tokens, typography scales, spacing rules, and component interaction states, refer to [docs/DESIGN.md](file://wsl.localhost/Ubuntu/home/darkside/projects/northwatch/docs/DESIGN.md).
+> For complete design tokens, typography scales, spacing rules, and component interaction states, refer to [docs/DESIGN.md](./DESIGN.md).
 
 ## 7. Non-Negotiable Rules for Agentic Development
 
@@ -208,7 +208,7 @@ The storefront should read as a **premium watch boutique / editorial site**, not
 - **Portability**: Standard `output: "standalone"` compatible for containerized deployment via Docker / Google Cloud Run.
 
 ### 8.2 Tax & Shipping Calculation
-- **Version 1**: Deterministic server-authoritative calculations governed by [`config/site.ts`](file://wsl.localhost/Ubuntu/home/darkside/projects/northwatch/config/site.ts).
+- **Version 1**: Deterministic server-authoritative calculations governed by [`config/site.ts`](../config/site.ts).
   - Shipping: Armored ground courier ($15.00, complimentary over $500.00), Express air courier ($35.00), and Priority vault courier ($75.00).
   - Tax: Destination-based state rates for sample collector jurisdictions (CA: 7.25%, NY: 8.875%, TX: 6.25%, FL: 6.00%; default 0.0%).
 - **Phase 2**: Automated nexus tracking and dynamic cross-border VAT calculation via Stripe Tax / TaxJar API integration.
