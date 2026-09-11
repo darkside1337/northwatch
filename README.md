@@ -41,9 +41,9 @@ Rather than resembling a generic high-volume retail platform, the experience is 
 ### Flow 1 — Variant Customizer & Technical Spec Matrix
 > Dynamic caliber and strap customization, real-time inventory allocation pips, exhibition caseback plate inspection, and regulated Swiss movement specifications.
 
-<video src="public/demo/flow1-customizer.mp4" controls="controls" width="100%" poster="public/demo/screenshots/02-product-detail.png">
-  <p>Your browser does not support the video tag. View the recording directly at <code>public/demo/flow1-customizer.mp4</code>.</p>
-</video>
+
+https://github.com/user-attachments/assets/0d61bcea-5e1d-4c10-806c-c92826130767
+
 
 <table width="100%">
   <tr>
@@ -63,9 +63,11 @@ Rather than resembling a generic high-volume retail platform, the experience is 
 ### Flow 2 — Vault Checkout Wizard & Real-Time Dispatch
 > Thin-cookie cart hydration, slide-out acquisition drawer with strikethrough promotional discounts, armored courier selection, and cryptographic Stripe authorization.
 
-<video src="public/demo/flow2-checkout.mp4" controls="controls" width="100%" poster="public/demo/screenshots/05-checkout-shipping.png">
-  <p>Your browser does not support the video tag. View the recording directly at <code>public/demo/flow2-checkout.mp4</code>.</p>
-</video>
+
+
+https://github.com/user-attachments/assets/3ee1a32c-8f97-49cc-98a9-aac2a419ca58
+
+
 
 <table width="100%">
   <tr>
@@ -85,9 +87,11 @@ Rather than resembling a generic high-volume retail platform, the experience is 
 ### Flow 3 — Mobile-First PDP & Editorial Monograph
 > Dedicated mobile dock navigation on iPhone 16 Pro Max viewports, touch-first specimen browsing, and manufacture provenance articles.
 
-<video src="public/demo/flow3-mobile.mp4" controls="controls" width="100%" poster="public/demo/screenshots/06-mobile-pdp.png">
-  <p>Your browser does not support the video tag. View the recording directly at <code>public/demo/flow3-mobile.mp4</code>.</p>
-</video>
+
+
+https://github.com/user-attachments/assets/4382b691-99c9-406e-9837-c7eca97cbc7d
+
+
 
 <table width="100%">
   <tr>
