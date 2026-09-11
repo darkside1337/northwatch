@@ -71,6 +71,7 @@ Northwatch is a boutique ecommerce storefront for minimalist men's watches built
 - **Design system & visual styling**: Read [docs/DESIGN.md](file:///home/darkside/projects/northwatch/docs/DESIGN.md) for complete design tokens, typography scales, spacing, hairline borders, and component specs.
 - **Next.js 16 APIs & breaking changes**: Read the bundled guides in `node_modules/next/dist/docs/`.
 - **Edge-case and adversarial review checklist**: Read [docs/edge-case-rules.md](file:///home/darkside/projects/northwatch/docs/edge-case-rules.md) before marking any step group complete that touches money, inventory, or shared/mutable state (cart, checkout, orders, promo logic). Run through it as a self-check, not just a reference.
+- **Testing, E2E automation & sandbox integration**: Read [docs/testing/TESTING.md](file:///home/darkside/projects/northwatch/docs/testing/TESTING.md) when writing, refactoring, or debugging unit tests, Playwright specs, or third-party fixtures.
 
 ## 6. Key Commands
 
