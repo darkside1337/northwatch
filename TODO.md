@@ -112,41 +112,41 @@ Needed before checkout can gate anything.
 
 Highest-stakes phase — "this is where bugs cost money." Strict server-side validation throughout.
 
-- [ ] Install Stripe SDK dependencies: `pnpm add stripe @stripe/stripe-js @stripe/react-stripe-js`
-- [ ] `features/checkout/schemas.ts` — strict Zod schemas for address, shipping method, payment step
-- [ ] Finalize `orders` / `order_items` schema in `lib/db/schema.ts`, migrate
-- [ ] `lib/payments/stripe.ts` — thin Stripe SDK client wrapper, zero business logic
-- [ ] `features/checkout/actions.ts` — `createPaymentIntent()`:
-  - [ ] Validate cart items via Zod
-  - [ ] Compute price, tax, shipping **entirely server-side** — never trust client-submitted totals
-  - [ ] Single atomic transaction (pooled Drizzle client): insert `orders` row (`pending_payment`) + `order_items` rows
-  - [ ] Write resulting `orderId` into Stripe PaymentIntent metadata
-- [ ] `features/checkout/__tests__/totals.test.ts` — Vitest unit tests for server-owned checkout math (subtotal + shipping + tax matching Stripe PaymentIntent cents, strictly omitting client totals)
-- [ ] Create PaymentIntent, return `client_secret`
-- [ ] `app/(shop)/checkout/layout.tsx` — minimal layout, strips nav/footer, adds trust badges
-- [ ] `app/(shop)/checkout/page.tsx` — entry / order summary
-- [ ] `features/checkout/components/AddressForm.tsx` → `app/(shop)/checkout/shipping/page.tsx`
-- [ ] `features/checkout/components/PaymentForm.tsx` (Stripe Elements) → `app/(shop)/checkout/payment/page.tsx`
-- [ ] `features/checkout/components/OrderSummary.tsx`
-- [ ] Form inputs follow DESIGN.md form-control spec (hairline borders, error state in `error` token, no glow rings)
-- [ ] Gate `/checkout/*` behind auth (Phase 4's proxy + layout-level check)
-- [ ] **Phase 5 Exit Check**: Complete test payment in Stripe Elements using test card `4242...` and redirect to confirmation.
+- [x] Install Stripe SDK dependencies: `pnpm add stripe @stripe/stripe-js @stripe/react-stripe-js`
+- [x] `features/checkout/schemas.ts` — strict Zod schemas for address, shipping method, payment step
+- [x] Finalize `orders` / `order_items` schema in `lib/db/schema.ts`, migrate
+- [x] `lib/payments/stripe.ts` — thin Stripe SDK client wrapper (Dahlia 2026-08-26), zero business logic
+- [x] `features/checkout/actions.ts` — `createOrUpdatePaymentIntent()`:
+  - [x] Validate cart items via Zod
+  - [x] Compute price, tax, shipping **entirely server-side** — never trust client-submitted totals
+  - [x] Single atomic transaction (pooled Drizzle client): acquire advisory lock, manage draft/order + line items
+  - [x] Write resulting `orderId` into Stripe PaymentIntent metadata with deterministic idempotency key
+- [x] `features/checkout/__tests__/totals.test.ts` — Vitest unit tests for server-owned checkout math (subtotal + shipping + tax matching Stripe PaymentIntent cents, strictly omitting client totals)
+- [x] Create PaymentIntent, return `client_secret`
+- [x] `app/(checkout)/layout.tsx` — minimal layout, strips nav/footer, adds 256-bit encrypted vault trust header
+- [x] `app/(checkout)/checkout/page.tsx` — entry / two-step wizard / order summary / empty bag state
+- [x] `features/checkout/components/AddressForm.tsx` & `ShippingStep.tsx`
+- [x] `features/checkout/components/PaymentForm.tsx` (Stripe Elements tabs)
+- [x] `features/checkout/components/OrderSummary.tsx`
+- [x] Form inputs follow DESIGN.md form-control spec (hairline borders, error state in `error` token, no glow rings)
+- [x] Gate `/checkout/*` behind auth (Phase 4's proxy + layout-level check)
+- [x] **Phase 5 Exit Check**: Complete test payment in Stripe Elements using test card `4242...` and redirect to confirmation.
 
 ---
 
 ## Phase 6 — Order Fulfillment & Webhooks
 
 - [ ] `features/orders/schemas.ts`, `types.ts`
-- [ ] `features/orders/actions.ts` — `fulfillOrder(orderId, stripeEventId)`:
-  - [ ] Conditional update `orders SET status='paid' WHERE id=:orderId AND status='pending_payment'`
-  - [ ] Only if exactly 1 row affected: decrement stock per `order_items`, same transaction
-  - [ ] 0 rows affected → no-op, return success (idempotent by construction)
+- [x] `features/orders/actions.ts` — `fulfillOrder(orderId, stripeEventId)`:
+  - [x] Conditional update `orders SET status='paid' WHERE id=:orderId AND status='pending_payment'`
+  - [x] Only if exactly 1 row affected: decrement stock per `order_items`, same transaction
+  - [x] 0 rows affected → no-op, return success (idempotent by construction)
   - [ ] Also implement `refund`
 - [ ] (Optional, stronger guarantee) `processed_webhook_events` table + short-circuit on seen event ID
 - [ ] `features/orders/__tests__/fulfillment.test.ts` — Vitest unit/integration tests for idempotent fulfillment logic and stock decrement
-- [ ] `app/api/webhooks/stripe/route.ts` — **verify signature only**, delegate immediately to `features/orders`. No inline fulfillment logic here, ever
-- [ ] `app/(shop)/checkout/confirmation/[orderId]/page.tsx` — reads order + order_items by ID; shows "awaiting confirmation" state while `pending_payment`, updates once webhook flips status to `paid`
-- [ ] **Phase 6 Exit Check**: Run `stripe listen --forward-to localhost:3000/api/webhooks/stripe`, trigger `payment_intent.succeeded`, confirm DB status flips to `paid`, stock decrements, and re-sending is idempotent.
+- [x] `app/api/webhooks/stripe/route.ts` — **verify signature only**, delegate immediately to `features/orders`. No inline fulfillment logic here, ever
+- [x] `app/(checkout)/confirmation/[orderId]/page.tsx` — reads order + order_items by ID; shows "awaiting confirmation" state while `pending_payment`, updates once webhook flips status to `paid`
+- [x] **Phase 6 Exit Check**: Run `stripe listen --forward-to localhost:3333/api/webhooks/stripe`, trigger `payment_intent.succeeded`, confirm DB status flips to `paid`, stock decrements, and re-sending is idempotent.
 
 ---
 
@@ -161,8 +161,8 @@ Highest-stakes phase — "this is where bugs cost money." Strict server-side val
 
 ## Phase 8 — Hardening & Critical-Path Testing
 
-- [ ] Set up Playwright, resolve the `pnpm test:e2e` TODO in `AGENTS.md`
-- [ ] `e2e/checkout.spec.ts` — full checkout flow (browse → cart → shipping → payment → confirmation). This test must never break; treat as merge-blocking going forward
+- [x] Set up Playwright, resolve the `pnpm test:e2e` TODO in `AGENTS.md`
+- [x] `e2e/checkout.spec.ts` — modular checkout flow suite (unauth redirect, empty bag, drawer flow, shipping inputs, back navigation, decline error, success + DB status verification, empty bag after order). This test must never break; treat as merge-blocking going forward
 - [ ] Audit: no raw DB/Stripe calls under `app/`; no `features/` imports inside `components/ui/`
 - [ ] Audit: every server action / route handler / webhook payload validated with Zod
 - [ ] Audit: all schema changes so far went through Drizzle migrations, none hand-edited

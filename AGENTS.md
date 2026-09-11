@@ -82,4 +82,4 @@ Northwatch is a boutique ecommerce storefront for minimalist men's watches built
 - `pnpm drizzle-kit generate` — Generate SQL migrations from schema
 - `pnpm drizzle-kit migrate` — Run pending database migrations
 - `pnpm db:studio` — Launch visual Drizzle Studio database browser
-- `pnpm test:e2e` — [TODO] Run Playwright checkout E2E test suite
+- `pnpm test:e2e` — Run Playwright checkout E2E test suite
