@@ -10,6 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:demo": "playwright test --config=playwright-demo.config.ts && ./scripts/convert-demos.sh",
+    "demo:screenshots": "playwright test --config=playwright-demo.config.ts --project=demo-screenshots",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts"
   },

@@ -45,6 +45,7 @@ test.describe("Checkout & Payments Modular E2E Suite", () => {
 
   test("3. Add to bag -> cart drawer -> proceed to checkout redirects unauthenticated user", async ({ page }) => {
     await page.goto("/products/field-automatic");
+    await page.waitForLoadState("networkidle");
     const addToBagBtn = page.getByRole("button", { name: /ADD TO BAG/i });
     await expect(addToBagBtn).toBeVisible();
     await addToBagBtn.click();

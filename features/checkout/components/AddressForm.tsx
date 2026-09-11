@@ -11,6 +11,7 @@ interface AddressFormProps {
   initialTierId?: ShippingTierId;
   subtotalCents: number;
   isLoading?: boolean;
+  onTierChange?: (tierId: ShippingTierId) => void;
   onSubmit: (data: {
     shippingAddress: ShippingAddress;
     shippingTierId: ShippingTierId;
@@ -22,6 +23,7 @@ export function AddressForm({
   initialTierId = "standard",
   subtotalCents,
   isLoading = false,
+  onTierChange,
   onSubmit,
 }: AddressFormProps) {
   const [formData, setFormData] = useState<ShippingAddress>({
@@ -38,6 +40,11 @@ export function AddressForm({
 
   const [selectedTier, setSelectedTier] = useState<ShippingTierId>(initialTierId);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleSelectTier = (tier: ShippingTierId) => {
+    setSelectedTier(tier);
+    onTierChange?.(tier);
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -85,7 +92,7 @@ export function AddressForm({
 
       <ShippingTierSelector
         selectedTier={selectedTier}
-        onSelectTier={setSelectedTier}
+        onSelectTier={handleSelectTier}
         subtotalCents={subtotalCents}
       />
 

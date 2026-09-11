@@ -225,9 +225,16 @@ export function CartDrawer() {
 
               <div className="flex justify-between items-baseline text-sm uppercase tracking-[0.12em] text-on-surface pt-2 border-t border-outline font-semibold">
                 <span>Estimated Total</span>
-                <span className="font-mono text-lg font-medium text-on-surface tabular-nums">
-                  {formatPrice(totals.totalCents)}
-                </span>
+                <div className="flex items-baseline gap-2.5">
+                  {totals.discountCents > 0 && (
+                    <span className="font-mono text-xs font-normal text-on-surface-variant/70 line-through tabular-nums">
+                      {formatPrice(totals.subtotalCents + (isFreeShipping ? 0 : totals.shippingEstimateCents))}
+                    </span>
+                  )}
+                  <span className="font-mono text-lg font-medium text-on-surface tabular-nums">
+                    {formatPrice(totals.totalCents)}
+                  </span>
+                </div>
               </div>
 
               <p className="text-[10px] text-on-surface-variant/80 pt-1 leading-normal">
@@ -244,8 +251,13 @@ export function CartDrawer() {
             >
               <span>{isPending ? "Updating..." : "Proceed to Checkout"}</span>
               <span className="font-mono text-white/80">—</span>
-              <span className="font-mono tabular-nums font-medium">
-                {formatPrice(totals.totalCents)}
+              <span className="font-mono tabular-nums font-medium inline-flex items-center gap-2">
+                {totals.discountCents > 0 && (
+                  <span className="line-through text-white/50 text-[11px] font-normal">
+                    {formatPrice(totals.subtotalCents + (isFreeShipping ? 0 : totals.shippingEstimateCents))}
+                  </span>
+                )}
+                <span>{formatPrice(totals.totalCents)}</span>
               </span>
             </button>
 

@@ -93,17 +93,17 @@ export function LineItem({ item, onItemClick }: LineItemProps) {
       {/* 2. Details & Controls */}
       <div className="flex-1 flex flex-col justify-between min-w-0">
         <div>
-          <div className="flex justify-between items-start gap-2">
+          <div className="flex justify-between items-start gap-2 pr-2">
             <Link
               href={`/products/${item.slug}`}
               onClick={onItemClick}
-              className="focus:outline-none hover:text-accent transition-colors"
+              className="focus:outline-none hover:text-accent transition-colors min-w-0 flex-1"
             >
               <h3 className="font-serif text-base sm:text-lg font-normal text-on-surface leading-snug tracking-wide truncate">
                 {item.title}
               </h3>
             </Link>
-            <span className="font-mono text-sm font-medium text-on-surface tabular-nums whitespace-nowrap">
+            <span className="font-mono text-sm font-medium text-on-surface tabular-nums whitespace-nowrap shrink-0 pl-2">
               {formatPrice(item.priceCents * item.quantity)}
             </span>
           </div>

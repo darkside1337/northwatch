@@ -99,7 +99,7 @@ const CATALOG_DATA: SeedProduct[] = [
         caseFinish: "Brushed 316L Steel",
         priceCents: 41000,
         stock: 12,
-        images: ["/images/watch-strap.jpg"],
+        images: ["/images/watch-field-38.jpg"],
       },
       {
         sku: "NW-01-FLD-BLK-MSH",

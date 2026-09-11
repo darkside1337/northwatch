@@ -6,6 +6,7 @@ import { AddressForm } from "./AddressForm";
 import { PaymentForm } from "./PaymentForm";
 import { OrderSummary } from "./OrderSummary";
 import { createOrUpdatePaymentIntent } from "../actions";
+import { calculateCheckoutTotals } from "../math";
 import type { CheckoutDraft, ShippingAddress } from "../schemas";
 import type { CartItem } from "@/features/cart/schemas";
 
@@ -119,6 +120,22 @@ export function CheckoutWizard({
     }
   };
 
+  // Handle real-time shipping tier selection change
+  const handleTierChange = (tierId: ShippingTierId) => {
+    setSelectedTierId(tierId);
+    const updated = calculateCheckoutTotals({
+      items,
+      shippingTierId: tierId,
+      stateCode: shippingAddress?.state ?? "CA",
+      promoCode,
+    });
+    setSubtotalCents(updated.subtotalCents);
+    setDiscountCents(updated.discountCents);
+    setShippingCents(updated.shippingCents);
+    setTaxCents(updated.taxCents);
+    setTotalCents(updated.totalCents);
+  };
+
   // Handle returning to Step 1 (Shipping)
   const handleReturnToShipping = () => {
     window.history.pushState(null, "", "?step=shipping");
@@ -184,6 +201,7 @@ export function CheckoutWizard({
             initialTierId={selectedTierId}
             subtotalCents={subtotalCents}
             isLoading={isLoading}
+            onTierChange={handleTierChange}
             onSubmit={handleShippingSubmit}
           />
         ) : draft && draft.clientSecret ? (
