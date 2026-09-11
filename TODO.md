@@ -136,14 +136,14 @@ Highest-stakes phase — "this is where bugs cost money." Strict server-side val
 
 ## Phase 6 — Order Fulfillment & Webhooks
 
-- [ ] `features/orders/schemas.ts`, `types.ts`
+- [x] `features/orders/schemas.ts`, `types.ts`
 - [x] `features/orders/actions.ts` — `fulfillOrder(orderId, stripeEventId)`:
   - [x] Conditional update `orders SET status='paid' WHERE id=:orderId AND status='pending_payment'`
   - [x] Only if exactly 1 row affected: decrement stock per `order_items`, same transaction
   - [x] 0 rows affected → no-op, return success (idempotent by construction)
-  - [ ] Also implement `refund`
-- [ ] (Optional, stronger guarantee) `processed_webhook_events` table + short-circuit on seen event ID
-- [ ] `features/orders/__tests__/fulfillment.test.ts` — Vitest unit/integration tests for idempotent fulfillment logic and stock decrement
+  - [x] Also implement `refund` (`refundOrder`, `refundOrderByPaymentIntent`)
+- [x] `processed_webhook_events` table + short-circuit on seen event ID
+- [x] `features/orders/__tests__/fulfillment.test.ts` — Vitest unit/integration tests for idempotent fulfillment logic, refund restocking, and replay protection
 - [x] `app/api/webhooks/stripe/route.ts` — **verify signature only**, delegate immediately to `features/orders`. No inline fulfillment logic here, ever
 - [x] `app/(checkout)/confirmation/[orderId]/page.tsx` — reads order + order_items by ID; shows "awaiting confirmation" state while `pending_payment`, updates once webhook flips status to `paid`
 - [x] **Phase 6 Exit Check**: Run `stripe listen --forward-to localhost:3333/api/webhooks/stripe`, trigger `payment_intent.succeeded`, confirm DB status flips to `paid`, stock decrements, and re-sending is idempotent.
@@ -152,10 +152,10 @@ Highest-stakes phase — "this is where bugs cost money." Strict server-side val
 
 ## Phase 7 — Account & Order History
 
-- [ ] `features/orders/queries.ts` — `getOrdersForUser`, `getOrderById`
-- [ ] `app/(account)/orders/page.tsx` — order history list, gated by auth
-- [ ] `app/(account)/orders/[orderId]/page.tsx` — order detail
-- [ ] **Phase 7 Exit Check**: Confirm full journey works end-to-end locally: browse → PDP → add to cart → checkout → pay (Stripe test mode) → confirmation → visible in order history
+- [x] `features/orders/queries.ts` — `getOrdersForUser`, `getOrderById` (with IDOR protection and pending_payment draft omission)
+- [x] `app/(account)/orders/page.tsx` — order history list (`/account/orders`), gated by auth, composing `getOrdersForUser` and `OrderArchiveList`
+- [x] `app/(account)/orders/[orderId]/page.tsx` — order detail (`/account/orders/[orderId]`), composing `getOrderById` and `OrderDetailView`
+- [x] **Phase 7 Exit Check**: Confirm full journey works end-to-end locally: browse → PDP → add to cart → checkout → pay (Stripe test mode) → confirmation → visible in order history
 
 ---
 

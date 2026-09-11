@@ -147,6 +147,29 @@ test.describe("Checkout & Payments Modular E2E Suite", () => {
 
     // UI updates to confirmed status
     await expect(page.getByText(/VAULT ALLOCATION CONFIRMED/i)).toBeVisible();
+
+    // Navigate to Order Archive from confirmation
+    const viewArchiveLink = page.getByRole("link", { name: /View in Order Archive/i });
+    await expect(viewArchiveLink).toBeVisible();
+    await viewArchiveLink.click();
+
+    // Verify order presence in Collector Order Archive
+    await expect(page).toHaveURL(/\/account\/orders/);
+    const orderRef = `NW-${orderId.slice(0, 8).toUpperCase()}`;
+    await expect(page.getByText(orderRef)).toBeVisible();
+    await expect(page.getByText(/ALLOCATED \/\/ PAID/i)).toBeVisible();
+
+    // Click through to Order Detail
+    const viewDetailsLink = page.locator(`a[href="/account/orders/${orderId}"]`);
+    await expect(viewDetailsLink).toBeVisible();
+    await viewDetailsLink.click();
+
+    // Verify Order Detail view
+    await expect(page).toHaveURL(new RegExp(`/account/orders/${orderId}`));
+    await expect(page.getByRole("heading", { name: orderRef })).toBeVisible();
+    await expect(page.getByText("Skeppsbron 14")).toBeVisible();
+    await expect(page.getByText(/Allocation Manifest/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Print Receipt/i })).toBeVisible();
   });
 
   test("8. Bag is empty after successful order", async ({ page, context }) => {
