@@ -40,8 +40,8 @@ export function CartDrawer() {
 
   const handleCheckoutClick = () => {
     closeCart();
-    // Route to full cart review or checkout flow
-    router.push("/cart");
+    // Route directly to unified checkout flow
+    router.push("/checkout");
   };
 
   return (

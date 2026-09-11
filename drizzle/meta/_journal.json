@@ -15,6 +15,13 @@
       "when": 1788963228174,
       "tag": "0001_groovy_jack_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789076882557,
+      "tag": "0002_futuristic_princess_powerful",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import {
   integer,
   jsonb,
   index,
+  uniqueIndex,
   check,
   pgEnum,
 } from "drizzle-orm/pg-core";
@@ -216,6 +217,8 @@ export const orders = pgTable(
     email: text("email").notNull(),
     status: orderStatusEnum("status").default("pending_payment").notNull(),
     subtotalCents: integer("subtotal_cents").notNull(),
+    discountCents: integer("discount_cents").default(0).notNull(),
+    promoCode: text("promo_code"),
     shippingCents: integer("shipping_cents").notNull(),
     taxCents: integer("tax_cents").notNull(),
     totalCents: integer("total_cents").notNull(),
@@ -233,6 +236,9 @@ export const orders = pgTable(
   (table) => [
     index("orders_user_id_idx").on(table.userId),
     index("orders_stripe_payment_intent_id_idx").on(table.stripePaymentIntentId),
+    uniqueIndex("orders_user_pending_idx")
+      .on(table.userId)
+      .where(sql`${table.status} = 'pending_payment'`),
   ],
 );
 

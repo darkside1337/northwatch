@@ -35,7 +35,10 @@ export function OAuthSignInCard({ redirectTo, isDev = false }: OAuthSignInCardPr
     setErrorMessage(null);
     startDevTransition(async () => {
       try {
-        await devSignInAction(safeRedirect);
+        const res = await devSignInAction(safeRedirect);
+        if (res?.destination) {
+          window.location.href = res.destination;
+        }
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : "Dev sign-in failed.");
       }

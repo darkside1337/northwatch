@@ -81,5 +81,5 @@ export async function devSignInAction(redirectTo?: string) {
   });
 
   const destination = sanitizeRedirectPath(redirectTo, "/account");
-  redirect(destination);
+  return { success: true, destination };
 }

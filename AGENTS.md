@@ -57,6 +57,7 @@ Northwatch is a boutique ecommerce storefront for minimalist men's watches built
 8. **Componentize Repeated UI & Map Over Data**: Never write duplicate repeating JSX structures inline. Whenever a visual pattern, section layout, or element repeats (or can be reused across views like section headers, product grids, spec matrices, cards), extract it into a dedicated component with typed props and render using `.map()` over structured data.
 9. **Prioritize Local Assets (Temporary — Pre-DB Population)**: Always prioritize and use local assets in `public/images/` over remote placeholder URLs. Once the database is populated with production product asset URLs, components will transition to database-backed images.
 10. **Verify Next.js 16 API claims against bundled docs**: Any invariant in this file describing Next.js-specific mechanics (cookie write boundaries, `proxy.ts` vs `middleware.ts`, PPR behavior) should be spot-checked against `node_modules/next/dist/docs/` before being extended to new code — this file's authors may be relying on outdated assumptions too.
+11. **Signed Session Cookies**: Never hand-roll session cookies in test fixtures. Generate valid signed cookies via Better Auth's `testUtils` plugin (`test.login()`).
 
 ## 4. Git & Commit Workflow
 

@@ -144,7 +144,13 @@ legal (a request handler vs. a render path; a background job vs. a
 user-facing action) — don't assume a function's current call sites define
 all its future ones.
 
-## 8. Before marking anything done, ask out loud:
+## 8. Never hand-roll signed framework cookies in test fixtures
+
+Frameworks like Better Auth sign session cookies with HMACs (`BETTER_AUTH_SECRET`). Setting raw UUID strings into cookies bypasses cryptographic signing, causing read-time verification (`getSession()`) to reject the session.
+
+**Rule:** Always generate test cookies via Better Auth's native `testUtils` plugin (`test.login()`). Never write raw session strings into test cookies.
+
+## 9. Before marking anything done, ask out loud:
 
 - What's the full set of states this code can encounter, and does every one
   have a defined, intentional behavior?

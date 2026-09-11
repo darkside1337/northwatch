@@ -14,7 +14,15 @@ const configuredHost = (() => {
 })();
 
 const allowedHosts = Array.from(
-  new Set(["localhost:3000", "localhost:3001", "127.0.0.1:3000", "127.0.0.1:3001", configuredHost].filter(Boolean))
+  new Set([
+    "localhost:3000",
+    "localhost:3001",
+    "localhost:3333",
+    "127.0.0.1:3000",
+    "127.0.0.1:3001",
+    "127.0.0.1:3333",
+    configuredHost,
+  ].filter(Boolean))
 );
 
 const trustedOrigins = Array.from(
@@ -22,8 +30,10 @@ const trustedOrigins = Array.from(
     [
       "http://localhost:3000",
       "http://localhost:3001",
+      "http://localhost:3333",
       "http://127.0.0.1:3000",
       "http://127.0.0.1:3001",
+      "http://127.0.0.1:3333",
       env.BETTER_AUTH_URL,
       env.NEXT_PUBLIC_APP_URL,
     ].filter((origin): origin is string => Boolean(origin))

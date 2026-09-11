@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import type { ThinCart } from "../schemas";
 
 // In-memory cookie store mock
@@ -35,8 +35,7 @@ import { eq } from "drizzle-orm";
 describe("Cart Server Actions Integration", { timeout: 25000 }, () => {
   let inStockVariantId: string;
 
-  beforeEach(async () => {
-    mockCookieState = { items: [] };
+  beforeAll(async () => {
     const variant = await db.query.productVariants.findFirst({
       where: eq(productVariants.sku, "NW-01-FLD-BLK-CAN"),
     });
@@ -44,6 +43,10 @@ describe("Cart Server Actions Integration", { timeout: 25000 }, () => {
       throw new Error("Missing seeded variant NW-01-FLD-BLK-CAN");
     }
     inStockVariantId = variant.id;
+  }, 30000);
+
+  beforeEach(() => {
+    mockCookieState = { items: [] };
   });
 
   it("getCartAction rehydrates cart from existing cookie", async () => {
