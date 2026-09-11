@@ -1,23 +1,54 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { orders, orderItems, productVariants } from "@/lib/db/schema";
+import {
+  orders,
+  orderItems,
+  productVariants,
+  processedWebhookEvents,
+} from "@/lib/db/schema";
+import type { FulfillOrderResult, RefundOrderResult } from "./types";
+import { refundOrderInputSchema } from "./schemas";
 
 /**
  * Fulfills an order upon receiving a verified Stripe payment_intent.succeeded webhook.
  *
  * ARCHITECTURAL INVARIANTS:
- * 1. Idempotency: Conditional UPDATE `WHERE id = :orderId AND status = 'pending_payment'`.
- *    If 0 rows affected (already processed or event replayed), it short-circuits gracefully.
- * 2. Atomic Stock Decrement: In the same transaction, decrements variant stock for each item.
+ * 1. Durable Idempotency: Checks and records `stripeEventId` in `processed_webhook_events`.
+ *    Replayed Stripe webhooks short-circuit immediately.
+ * 2. Conditional State Transition: `UPDATE WHERE id = :orderId AND status = 'pending_payment'`.
+ *    If 0 rows affected, it short-circuits gracefully without mutating inventory.
+ * 3. Atomic Stock Decrement: In the same transaction, decrements variant stock for each item.
  */
-export async function fulfillOrder(orderId: string, stripeEventId?: string) {
+export async function fulfillOrder(
+  orderId: string,
+  stripeEventId?: string
+): Promise<FulfillOrderResult> {
   if (stripeEventId) {
-    console.info(`Fulfilling order ${orderId} from Stripe event ${stripeEventId}`);
+    console.info(`[Fulfillment] Processing order ${orderId} for Stripe event ${stripeEventId}`);
   }
+
   return await db.transaction(async (tx) => {
-    // 1. Attempt status transition
+    // 1. Check & record Stripe webhook event replay guard
+    if (stripeEventId) {
+      const existingEvent = await tx.query.processedWebhookEvents.findFirst({
+        where: eq(processedWebhookEvents.id, stripeEventId),
+      });
+
+      if (existingEvent) {
+        console.info(`[Fulfillment] Event ${stripeEventId} already recorded, short-circuiting.`);
+        return { success: true, alreadyProcessed: true };
+      }
+
+      await tx.insert(processedWebhookEvents).values({
+        id: stripeEventId,
+        eventType: "payment_intent.succeeded",
+        processedAt: new Date(),
+      });
+    }
+
+    // 2. Attempt status transition
     const updated = await tx
       .update(orders)
       .set({
@@ -37,7 +68,7 @@ export async function fulfillOrder(orderId: string, stripeEventId?: string) {
       return { success: true, alreadyProcessed: true };
     }
 
-    // 2. Fetch line items to decrement stock
+    // 3. Fetch line items to decrement stock
     const items = await tx
       .select({
         variantId: orderItems.variantId,
@@ -46,7 +77,7 @@ export async function fulfillOrder(orderId: string, stripeEventId?: string) {
       .from(orderItems)
       .where(eq(orderItems.orderId, orderId));
 
-    // 3. Decrement inventory atomically
+    // 4. Decrement inventory atomically
     for (const item of items) {
       await tx
         .update(productVariants)
@@ -59,4 +90,145 @@ export async function fulfillOrder(orderId: string, stripeEventId?: string) {
 
     return { success: true, alreadyProcessed: false };
   });
+}
+
+/**
+ * Refunds an order and atomically restores inventory back to product_variants.
+ *
+ * ARCHITECTURAL INVARIANTS:
+ * 1. Eligible State Gating: Only orders in 'paid' or 'shipped' state can be refunded.
+ * 2. Durable Idempotency: Logs `stripeRefundId` in `processed_webhook_events`.
+ * 3. Atomic Restocking: Increments variant stock by line item quantity within the same transaction.
+ */
+export async function refundOrder(
+  orderId: string,
+  stripeRefundId?: string,
+  reason?: string
+): Promise<RefundOrderResult> {
+  const parseResult = refundOrderInputSchema.safeParse({
+    orderId,
+    stripeRefundId,
+    reason,
+  });
+
+  if (!parseResult.success) {
+    return {
+      success: false,
+      alreadyProcessed: false,
+      error: parseResult.error.issues[0]?.message ?? "Invalid refund parameters",
+    };
+  }
+
+  return await db.transaction(async (tx) => {
+    // 1. Check & record Stripe refund event replay guard
+    if (stripeRefundId) {
+      const existingEvent = await tx.query.processedWebhookEvents.findFirst({
+        where: eq(processedWebhookEvents.id, stripeRefundId),
+      });
+
+      if (existingEvent) {
+        console.info(`[Refund] Event ${stripeRefundId} already recorded, short-circuiting.`);
+        return { success: true, alreadyProcessed: true };
+      }
+
+      await tx.insert(processedWebhookEvents).values({
+        id: stripeRefundId,
+        eventType: "charge.refunded",
+        processedAt: new Date(),
+      });
+    }
+
+    // 2. Attempt conditional transition from 'paid' or 'shipped' to 'refunded'
+    const updated = await tx
+      .update(orders)
+      .set({
+        status: "refunded",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(orders.id, orderId),
+          inArray(orders.status, ["paid", "shipped"])
+        )
+      )
+      .returning({ id: orders.id });
+
+    // Handle when no row was updated
+    if (updated.length === 0) {
+      const existing = await tx.query.orders.findFirst({
+        where: eq(orders.id, orderId),
+        columns: { status: true },
+      });
+
+      if (!existing) {
+        return {
+          success: false,
+          alreadyProcessed: false,
+          error: "Order not found",
+        };
+      }
+
+      if (existing.status === "refunded") {
+        return { success: true, alreadyProcessed: true };
+      }
+
+      return {
+        success: false,
+        alreadyProcessed: false,
+        error: `Order with status '${existing.status}' cannot be refunded`,
+      };
+    }
+
+    // 3. Restock inventory for each order item
+    const items = await tx
+      .select({
+        variantId: orderItems.variantId,
+        quantity: orderItems.quantity,
+      })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId));
+
+    for (const item of items) {
+      await tx
+        .update(productVariants)
+        .set({
+          stock: sql`${productVariants.stock} + ${item.quantity}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(productVariants.id, item.variantId));
+    }
+
+    console.info(`[Refund] Order ${orderId} refunded successfully. Restocked ${items.length} item(s).`);
+
+    return {
+      success: true,
+      alreadyProcessed: false,
+      restockedItemsCount: items.length,
+    };
+  });
+}
+
+/**
+ * Helper to refund an order when notified via Stripe webhook with a PaymentIntent ID.
+ */
+export async function refundOrderByPaymentIntent(
+  paymentIntentId: string,
+  stripeRefundId?: string,
+  reason?: string
+): Promise<RefundOrderResult> {
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.stripePaymentIntentId, paymentIntentId),
+    columns: { id: true },
+  });
+
+  if (!order) {
+    console.warn(`[Refund] No order found matching payment_intent '${paymentIntentId}'`);
+    return {
+      success: false,
+      alreadyProcessed: false,
+      error: `Order with payment_intent ${paymentIntentId} not found`,
+    };
+  }
+
+  return refundOrder(order.id, stripeRefundId, reason);
 }

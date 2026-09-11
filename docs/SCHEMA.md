@@ -74,6 +74,7 @@ erDiagram
         text water_resistance "e.g. 100m"
         text editorial_quote "v1 PDP quote"
         text quote_author
+        jsonb specs "Structured horological specifications"
         boolean featured
         timestamp created_at
         timestamp updated_at
@@ -100,6 +101,8 @@ erDiagram
         text email "Customer email"
         order_status status "ENUM pending_payment | paid | shipped | delivered | canceled | refunded"
         integer subtotal_cents "Cents"
+        integer discount_cents "Default 0 cents"
+        text promo_code "Applied promo code"
         integer shipping_cents "Cents"
         integer tax_cents "Cents"
         integer total_cents "Cents"
@@ -132,8 +135,10 @@ erDiagram
 
 ## 2. Invariant Checklist
 
-1. **Monetary Integrity**: All prices, taxes, shipping fees, and totals are strictly stored as `integer` cents (e.g. `$740.00` = `74000`).
+1. **Monetary Integrity**: All prices, discounts, taxes, shipping fees, and totals are strictly stored as `integer` cents (e.g. `$740.00` = `74000`).
 2. **Historical Integrity**: `order_items` snapshots `title`, `variant_name`, and `unit_price_cents` so historical invoices never mutate if a product is updated or discontinued.
 3. **Inventory Safety**: `CHECK ("stock" >= 0)` on `product_variants` prevents race conditions from driving stock into negative values.
 4. **Webhook Idempotency**: `processed_webhook_events` logs Stripe event IDs to ensure duplicate webhooks are safely ignored.
 5. **Enums**: `order_status` is an immutable PostgreSQL ENUM preventing malformed status states.
+6. **Single Active Pending Order**: `orders_user_pending_idx` unique index on `(user_id) WHERE status = 'pending_payment'` ensures authenticated users cannot spawn multiple concurrent orphaned checkout drafts.
+7. **Promo & Discount Transparency**: `discount_cents` defaults to 0 and explicitly captures coupon deductions; `promo_code` logs the voucher string for order auditability.

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { stripe } from "@/lib/payments/stripe";
 import { env } from "@/config/env";
-import { fulfillOrder } from "@/features/orders/actions";
+import { fulfillOrder, refundOrderByPaymentIntent } from "@/features/orders/actions";
 import type Stripe from "stripe";
 
 export async function POST(req: NextRequest) {
@@ -30,6 +30,17 @@ export async function POST(req: NextRequest) {
     const orderId = paymentIntent.metadata?.orderId;
     if (orderId) {
       await fulfillOrder(orderId, event.id);
+    }
+  } else if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    const paymentIntentId =
+      typeof charge.payment_intent === "string"
+        ? charge.payment_intent
+        : charge.payment_intent?.id;
+    const reason = charge.refunds?.data?.[0]?.reason ?? undefined;
+
+    if (paymentIntentId) {
+      await refundOrderByPaymentIntent(paymentIntentId, event.id, reason);
     }
   }
 
