@@ -12,6 +12,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./"),
+      // Server-only is a build-time guard; vitest executes server modules
+      // directly, so stub it to a no-op in the test environment.
+      "server-only": path.resolve(import.meta.dirname, "./vitest.server-only-stub.ts"),
     },
   },
 });

@@ -1,5 +1,7 @@
 export * from "./queries";
-export * from "./actions";
+// NOTE: ./actions.server is webhook-trusted only (server-only) and must never
+// be barrel-exported — re-exporting it would make fulfillOrder/refundOrder
+// importable (and callable) from client components.
 export * from "./schemas";
 export * from "./types";
 export * from "./components/OrderStatusBadge";

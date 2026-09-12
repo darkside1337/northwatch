@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
@@ -19,11 +19,13 @@ import {
  * Fulfills an order upon receiving a verified Stripe payment_intent.succeeded webhook.
  *
  * ARCHITECTURAL INVARIANTS:
- * 1. Durable Idempotency: Checks and records `stripeEventId` in `processed_webhook_events`.
- *    Replayed Stripe webhooks short-circuit immediately.
+ * 1. Durable Idempotency: Checks and records `stripeEventId` in `processed_webhook_events`
+ *    via SELECT + INSERT ... ON CONFLICT DO NOTHING. Replayed Stripe webhooks
+ *    short-circuit immediately (0-row insert = lost race = duplicate).
  * 2. Conditional State Transition: `UPDATE WHERE id = :orderId AND status = 'pending_payment'`.
  *    If 0 rows affected, it short-circuits gracefully without mutating inventory.
- * 3. Atomic Stock Decrement: In the same transaction, decrements variant stock for each item.
+ * 3. Guarded Stock Decrement: `UPDATE ... WHERE stock >= qty`; shortfall throws
+ *    OUT_OF_STOCK so the paid flip rolls back and the route can cancel + refund.
  */
 export async function fulfillOrder(
   orderId: string,
@@ -47,7 +49,10 @@ export async function fulfillOrder(
   }
 
   return await db.transaction(async (tx) => {
-    // 1. Check & record Stripe webhook event replay guard
+    // 1. Check & record Stripe webhook event replay guard.
+    // Concurrent duplicate deliveries can both miss the SELECT under READ
+    // COMMITTED, so the INSERT uses ON CONFLICT DO NOTHING; a 0-row insert
+    // means we lost the race and this delivery is a duplicate.
     if (stripeEventId) {
       const existingEvent = await tx.query.processedWebhookEvents.findFirst({
         where: eq(processedWebhookEvents.id, stripeEventId),
@@ -58,11 +63,16 @@ export async function fulfillOrder(
         return { success: true, alreadyProcessed: true };
       }
 
-      await tx.insert(processedWebhookEvents).values({
+      const inserted = await tx.insert(processedWebhookEvents).values({
         id: stripeEventId,
         eventType: "payment_intent.succeeded",
         processedAt: new Date(),
-      });
+      }).onConflictDoNothing({ target: processedWebhookEvents.id }).returning({ id: processedWebhookEvents.id });
+
+      if (inserted.length === 0) {
+        console.info(`[Fulfillment] Event ${stripeEventId} recorded concurrently, short-circuiting.`);
+        return { success: true, alreadyProcessed: true };
+      }
     }
 
     // 2. Attempt status transition
@@ -94,15 +104,32 @@ export async function fulfillOrder(
       .from(orderItems)
       .where(eq(orderItems.orderId, orderId));
 
-    // 4. Decrement inventory atomically
+    // 4. Decrement inventory atomically, guarded against oversell.
+    // WHERE stock >= qty makes the decrement conditional; a 0-row result
+    // means insufficient stock (concurrent sell-through). Throw OUT_OF_STOCK
+    // so the whole transaction (including the paid flip above) rolls back —
+    // the webhook route then auto-cancels + refunds instead of relying on the
+    // stock_non_negative CHECK constraint, which would strand a paid order.
     for (const item of items) {
-      await tx
+      const decremented = await tx
         .update(productVariants)
         .set({
           stock: sql`${productVariants.stock} - ${item.quantity}`,
           updatedAt: new Date(),
         })
-        .where(eq(productVariants.id, item.variantId));
+        .where(
+          and(
+            eq(productVariants.id, item.variantId),
+            sql`${productVariants.stock} >= ${item.quantity}`
+          )
+        )
+        .returning({ id: productVariants.id });
+
+      if (decremented.length === 0) {
+        throw new Error(
+          `OUT_OF_STOCK: variant ${item.variantId} has insufficient stock for quantity ${item.quantity}`
+        );
+      }
     }
 
     return { success: true, alreadyProcessed: false };
@@ -137,7 +164,8 @@ export async function refundOrder(
   }
 
   return await db.transaction(async (tx) => {
-    // 1. Check & record Stripe refund event replay guard
+    // 1. Check & record Stripe refund event replay guard (same ON CONFLICT
+    // pattern as fulfillOrder — see above).
     if (stripeRefundId) {
       const existingEvent = await tx.query.processedWebhookEvents.findFirst({
         where: eq(processedWebhookEvents.id, stripeRefundId),
@@ -148,11 +176,16 @@ export async function refundOrder(
         return { success: true, alreadyProcessed: true };
       }
 
-      await tx.insert(processedWebhookEvents).values({
+      const inserted = await tx.insert(processedWebhookEvents).values({
         id: stripeRefundId,
         eventType: "charge.refunded",
         processedAt: new Date(),
-      });
+      }).onConflictDoNothing({ target: processedWebhookEvents.id }).returning({ id: processedWebhookEvents.id });
+
+      if (inserted.length === 0) {
+        console.info(`[Refund] Event ${stripeRefundId} recorded concurrently, short-circuiting.`);
+        return { success: true, alreadyProcessed: true };
+      }
     }
 
     // 2. Attempt conditional transition from 'paid' or 'shipped' to 'refunded'
