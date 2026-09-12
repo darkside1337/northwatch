@@ -10,7 +10,11 @@ import { calculateCheckoutTotals } from "@/features/checkout/math";
 
 export const instant = false;
 
-export default async function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ step?: string }>;
+}) {
   // Authoritative server-side session resolution
   await requireAuth("/checkout");
 
@@ -71,6 +75,11 @@ export default async function CheckoutPage() {
   return (
     <CheckoutWizard
       initialDraft={initialDraft}
+      initialStep={
+        (await searchParams).step === "payment" && initialDraft?.clientSecret
+          ? "payment"
+          : "shipping"
+      }
       items={cartState.items}
       subtotalCents={initialTotals.subtotalCents}
       discountCents={initialTotals.discountCents}

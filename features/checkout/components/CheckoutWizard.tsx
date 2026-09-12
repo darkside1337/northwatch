@@ -12,6 +12,7 @@ import type { CartItem } from "@/features/cart/schemas";
 
 interface CheckoutWizardProps {
   initialDraft: CheckoutDraft | null;
+  initialStep?: "shipping" | "payment";
   items: CartItem[];
   subtotalCents: number;
   discountCents: number;
@@ -23,6 +24,7 @@ interface CheckoutWizardProps {
 
 export function CheckoutWizard({
   initialDraft,
+  initialStep,
   items,
   subtotalCents: initialSubtotal,
   discountCents: initialDiscount,
@@ -31,16 +33,11 @@ export function CheckoutWizard({
   taxCents: initialTax,
   totalCents: initialTotal,
 }: CheckoutWizardProps) {
-  // Determine initial step: if a valid active draft with clientSecret exists, can default to payment
-  const [step, setStep] = useState<"shipping" | "payment">(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("step") === "payment" && initialDraft?.clientSecret) {
-        return "payment";
-      }
-    }
-    return initialDraft?.clientSecret ? "payment" : "shipping";
-  });
+  // Initial step is deterministic from server-provided props (page reads
+  // ?step= via async searchParams), so SSR HTML and first client render agree.
+  const [step, setStep] = useState<"shipping" | "payment">(
+    initialStep ?? (initialDraft?.clientSecret ? "payment" : "shipping")
+  );
 
   const [draft, setDraft] = useState<CheckoutDraft | null>(initialDraft);
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(
