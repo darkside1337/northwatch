@@ -212,7 +212,9 @@ export async function createOrUpdatePaymentIntent(
       );
     } catch (stripeErr) {
       console.warn("Could not update existing PaymentIntent; creating replacement:", stripeErr);
-      const fallbackKey = `create_pi_${draftInfo.orderId}_fallback`;
+      // Fallback key includes the committed total so a retry after a
+      // bag edit never replays a stale-amount PaymentIntent idempotently.
+      const fallbackKey = `create_pi_${draftInfo.orderId}_${draftInfo.totalCents}_fallback`;
       paymentIntent = await stripe.paymentIntents.create(
         {
           amount: draftInfo.totalCents,
@@ -243,7 +245,17 @@ export async function createOrUpdatePaymentIntent(
     );
   }
 
-  // Step 3: Fast database write to persist new Stripe PaymentIntent ID (<2ms)
+  // Step 3: Verify the PaymentIntent amount matches the committed total
+  // before handing the clientSecret to the browser. A stale-amount PI
+  // (e.g. idempotent replay after a bag edit) must never be fulfilled.
+  if (paymentIntent.amount !== draftInfo.totalCents) {
+    console.error(
+      `[Checkout] PaymentIntent ${paymentIntent.id} amount ${paymentIntent.amount} mismatches order ${draftInfo.orderId} total ${draftInfo.totalCents}`
+    );
+    throw new Error("Payment amount mismatch. Please retry checkout.");
+  }
+
+  // Step 4: Fast database write to persist new Stripe PaymentIntent ID (<2ms)
   if (needsPaymentIntentIdPersistence && paymentIntent.id) {
     await db
       .update(orders)

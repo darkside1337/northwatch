@@ -7,7 +7,7 @@ import {
   processedWebhookEvents,
 } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { fulfillOrder, refundOrder, refundOrderByPaymentIntent } from "../actions";
+import { fulfillOrder, refundOrder, refundOrderByPaymentIntent } from "../actions.server";
 import {
   orderStatusSchema,
   orderItemSchema,
@@ -290,5 +290,120 @@ describe("Orders Domain: Fulfillment, Webhook Idempotency & Refunds", { timeout:
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Order not found");
+  });
+});
+
+describe("Orders Domain: Concurrency Guards (idempotency race + oversell)", { timeout: 35000 }, () => {
+  let variantId: string;
+  let productId: string;
+
+  beforeAll(async () => {
+    const variant = await db.query.productVariants.findFirst({
+      where: eq(productVariants.sku, "NW-01-FLD-BLK-CAN"),
+    });
+    if (!variant) throw new Error("Seed variant NW-01-FLD-BLK-CAN not found");
+    variantId = variant.id;
+    productId = variant.productId;
+  });
+
+  async function createPendingOrder(totalCents = 79365, quantity = 1, piSuffix = "") {
+    const orderId = crypto.randomUUID();
+    await db.insert(orders).values({
+      id: orderId,
+      email: "guard-test@northwatch.ch",
+      status: "pending_payment",
+      subtotalCents: 74000,
+      discountCents: 0,
+      shippingCents: 0,
+      taxCents: 5365,
+      totalCents,
+      shippingTierId: "standard",
+      shippingAddress: {
+        firstName: "Guard",
+        lastName: "Test",
+        street: "Bahnhofstrasse 1",
+        city: "Zurich",
+        state: "ZH",
+        postalCode: "8001",
+        country: "CH",
+      },
+      stripePaymentIntentId: `pi_guard_${Date.now()}_${piSuffix}`,
+    });
+    await db.insert(orderItems).values({
+      id: crypto.randomUUID(),
+      orderId,
+      productId,
+      variantId,
+      quantity,
+      unitPriceCents: 74000,
+      title: "Guard Test",
+      variantName: "Guard Variant",
+    });
+    return orderId;
+  }
+
+  async function cleanupOrder(orderId: string, eventIds: string[]) {
+    await db.delete(orderItems).where(eq(orderItems.orderId, orderId));
+    await db.delete(orders).where(eq(orders.id, orderId));
+    if (eventIds.length > 0) {
+      await db.delete(processedWebhookEvents).where(inArray(processedWebhookEvents.id, eventIds));
+    }
+  }
+
+  it("concurrent duplicate deliveries decrement stock exactly once", async () => {
+    const orderId = await createPendingOrder(79365, 1, "race");
+    const eventId = `evt_guard_race_${Date.now()}`;
+    const before = (await db.query.productVariants.findFirst({
+      where: eq(productVariants.id, variantId),
+    }))!.stock;
+
+    try {
+      const [first, second] = await Promise.all([
+        fulfillOrder(orderId, eventId),
+        fulfillOrder(orderId, eventId),
+      ]);
+
+      expect(first.success).toBe(true);
+      expect(second.success).toBe(true);
+      // Exactly one delivery does the work; the loser short-circuits.
+      const alreadyCount = [first, second].filter((r) => r.alreadyProcessed).length;
+      expect(alreadyCount).toBe(1);
+
+      const after = (await db.query.productVariants.findFirst({
+        where: eq(productVariants.id, variantId),
+      }))!.stock;
+      expect(after).toBe(before - 1);
+    } finally {
+      await cleanupOrder(orderId, [eventId]);
+      // Restore the single unit this test consumed
+      const current = (await db.query.productVariants.findFirst({
+        where: eq(productVariants.id, variantId),
+      }))!.stock;
+      await db.update(productVariants).set({ stock: current + 1 }).where(eq(productVariants.id, variantId));
+    }
+  });
+
+  it("oversell rolls back the paid flip (OUT_OF_STOCK, order stays pending)", async () => {
+    // Order more than current stock so fulfillment cannot succeed. Shared
+    // seed stock is never mutated, keeping this suite parallel-safe.
+    const current = (await db.query.productVariants.findFirst({
+      where: eq(productVariants.id, variantId),
+    }))!.stock;
+    const orderId = await createPendingOrder(79365, current + 5, "oos");
+    const eventId = `evt_guard_oos_${Date.now()}`;
+
+    try {
+      await expect(fulfillOrder(orderId, eventId)).rejects.toThrow("OUT_OF_STOCK");
+
+      const order = await db.query.orders.findFirst({ where: eq(orders.id, orderId) });
+      expect(order?.status).toBe("pending_payment");
+
+      const variant = await db.query.productVariants.findFirst({
+        where: eq(productVariants.id, variantId),
+      });
+      expect(variant?.stock).toBe(current);
+    } finally {
+      await cleanupOrder(orderId, [eventId]);
+    }
   });
 });

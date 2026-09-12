@@ -103,6 +103,8 @@ export const refundOrderResultSchema = z.object({
 export const stripePaymentIntentWebhookSchema = z
   .object({
     id: z.string().min(1),
+    amount: z.number().int().positive().optional(),
+    amount_received: z.number().int().nonnegative().optional().nullable(),
     metadata: z
       .object({
         orderId: z.string().uuid("Invalid orderId in metadata"),
